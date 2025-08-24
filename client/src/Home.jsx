@@ -1,4 +1,10 @@
+import { useState } from "react"
+
+
 const Home = () => {
+
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -23,7 +29,7 @@ const Home = () => {
               </a>
             </nav>
             <div className="flex items-center space-x-4">
-              <button className="text-slate-600 hover:text-blue-600 font-medium transition-colors">Sign In</button>
+              <button className="text-slate-600 hover:text-blue-600 font-medium transition-colors" onClick={() => setShowModal(true)}>Sign In</button>
               <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
                 Get Started
               </button>
@@ -232,6 +238,9 @@ const Home = () => {
           </div>
         </div>
       </footer>
+      {
+        showModal ? (<AuthModal/>) : (<div></div>)
+      }
     </div>
   )
 }
