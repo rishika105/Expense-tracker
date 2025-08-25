@@ -6,8 +6,7 @@ const userSchema = mongoose.Schema({
     required: true,
   },
   otp: {
-    type: Number,
-    required: true,
+    type: String,
   },
   otpCreatedAt: {
     type: Date,

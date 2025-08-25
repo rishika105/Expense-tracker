@@ -46,14 +46,14 @@ exports.sendOtp = async (req, res) => {
     }
 
     // send OTP via email
-    await emailSender(email, otp);
+    await emailSender(email, "Here is your one-time-password ", `<div>It will expire soon use it fast </div>${otp}`);
 
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
     });
   } catch (error) {
-    console.error("Error in userAuth:", error);
+    console.error("Error in sending otp:", error);
     return res.status(500).json({
       success: false,
       message: "Something went with server",
@@ -87,7 +87,7 @@ exports.verifyOtp = async (req, res) => {
     if(now - user.otpCreatedAt > 300000){
         return res.status(400).json({
             success: false,
-            message: "OTP expired";
+            message: "OTP expired"
         })
     }
 
@@ -121,10 +121,10 @@ exports.verifyOtp = async (req, res) => {
     });
 
   } catch (error) {
-     console.error("Error in verifyOtp:", error);
+     console.error("Error in verifying otp:", error);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong",
+      message: "Something went with server",
     });
   }
 };
