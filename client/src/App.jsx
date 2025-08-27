@@ -3,7 +3,9 @@ import "./App.css";
 import Home from "./pages/Home";
 import OpenRoute from "./guards/OpenRoute";
 import PrivateRoute from "./guards/PrivateRoute";
-import Expense from "./pages/Expense";
+import AddExpense from "./pages/AddExpense";
+import ProfileSetup from "./components/ProfileSetup";
+import ExpensePreference from "./components/ExpensePreference";
 
 function App() {
   return (
@@ -19,10 +21,28 @@ function App() {
         />
 
         <Route
-          path="/expense"
+          path="/add-expense"
           element={
             <PrivateRoute>
-              <Expense />
+              <AddExpense />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/profile-setup"
+          element={
+            <PrivateRoute>
+              <ProfileSetup />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/preferences"
+          element={
+            <PrivateRoute>
+              <ExpensePreference />
             </PrivateRoute>
           }
         />

@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const Preference = require("./Preference");
+const { default: Expense } = require("./Expense");
 
 const userSchema = mongoose.Schema({
   email: {
@@ -11,6 +13,43 @@ const userSchema = mongoose.Schema({
   otpCreatedAt: {
     type: Date,
   },
+  // For OTP login
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  // Profile details
+  fullName: {
+    type: String,
+    trim: true,  //idhar required true nhi coz hum pehle null bharenge while verification baad mai update krenge
+  },
+  userName: {
+    type: String,
+    unique: true,
+    sparse: true, // allows nulls but unique if filled
+  },
+  dateOfBirth: {
+    type: Date,
+  },
+  gender: {
+    type: String,
+    enum: ["Male", "Female", "Other"],
+  },
+  phone: {
+    type: String,
+  },
 });
+
+
+// Pre hook before deleting a user
+userSchema.pre("findOneAndDelete", async function (next) {
+  const user = await this.model.findOne(this.getFilter());
+  if (user) {
+    await Preference.deleteOne({ userId: user._id });
+    await Expense.deleteMany({ userId: user._id });
+  }
+  return next();
+});
+
 
 module.exports = mongoose.model("User", userSchema);
