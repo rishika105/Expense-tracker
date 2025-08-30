@@ -5,6 +5,9 @@ const initialState = {
   token: localStorage.getItem("token")
     ? JSON.parse(localStorage.getItem("token"))
     : null,
+  isVerified: localStorage.getItem("isVerified")
+    ? JSON.parse(localStorage.getItem("isVerified"))
+    : null, // new field
 };
 
 const authSlice = createSlice({
@@ -17,6 +20,9 @@ const authSlice = createSlice({
     setToken(state, value) {
       state.token = value.payload;
     },
+    setIsVerified(state, value) {
+      state.isVerified = value.payload;
+    },
     clearToken(state) {
       state.token = null;
       localStorage.removeItem("token"); // ✅ logout case
@@ -24,6 +30,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setLoading, setToken, clearToken } = authSlice.actions;
+export const { setLoading, setToken, clearToken, setIsVerified } =
+  authSlice.actions;
 
 export default authSlice.reducer;

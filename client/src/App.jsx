@@ -5,7 +5,7 @@ import OpenRoute from "./guards/OpenRoute";
 import PrivateRoute from "./guards/PrivateRoute";
 import AddExpense from "./pages/AddExpense";
 import ProfileSetup from "./components/ProfileSetup";
-import ExpensePreference from "./components/ExpensePreference";
+import PreferencesSetup from "./components/PreferencesSetup";
 
 function App() {
   return (
@@ -42,7 +42,7 @@ function App() {
           path="/preferences"
           element={
             <PrivateRoute>
-              <ExpensePreference />
+              <PreferencesSetup />
             </PrivateRoute>
           }
         />

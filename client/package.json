@@ -18,6 +18,7 @@
     "clsx": "^2.1.1",
     "concurrently": "^9.2.0",
     "copy-to-clipboard": "^3.3.3",
+    "currencies.json": "^1.1.0",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

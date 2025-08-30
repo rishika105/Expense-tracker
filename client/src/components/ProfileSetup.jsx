@@ -165,10 +165,8 @@ const ProfileSetup = () => {
             <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
             <div className="w-8 h-1 bg-blue-600 rounded"></div>
             <div className="w-3 h-3 bg-slate-300 rounded-full"></div>
-            <div className="w-8 h-1 bg-slate-300 rounded"></div>
-            <div className="w-3 h-3 bg-slate-300 rounded-full"></div>
           </div>
-          <p className="text-sm text-slate-500 mt-2">Step 1 of 3</p>
+          <p className="text-sm text-slate-500 mt-2">Step 1 of 2</p>
         </div>
       </div>
     </div>

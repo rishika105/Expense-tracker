@@ -1,5 +1,5 @@
 import { apiConnector } from "../utils/apiConnector";
-import { setLoading, setToken } from "../slices/authSlice";
+import { setIsVerified, setLoading, setToken } from "../slices/authSlice";
 import toast from "react-hot-toast";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -45,12 +45,15 @@ export function verifyEmail(email, otp, navigate) {
       }
 
       dispatch(setToken(response.data.token));
-      if(!response.data.verified){
-        navigate("/profile-setup");
-      }
-      else navigate("/dashboard")
+      dispatch(setIsVerified(response.data.verified))
       
-      localStorage.setItem("token", JSON.stringify(response.data.token)); //for persistence after log out or reload or when app reruns...the redus goes empty
+      if (!response.data.verified) {
+        navigate("/profile-setup");
+      } else navigate("/dashboard");
+
+      localStorage.setItem("token", JSON.stringify(response.data.token)); //for persistence after log out or reload or when app reruns...the redux goes empty
+      localStorage.setItem("isVerified", JSON.stringify(response.data.verified))
+
 
       toast.success("Log In success");
     } catch (error) {
@@ -68,9 +71,14 @@ export function updateProfile(data, token) {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-    const response = await apiConnector("PUT", `${BASE_URL}/update-profile`, data,      {
-      Authorization: `Bearer ${token}`,
-    });
+      const response = await apiConnector(
+        "PUT",
+        `${BASE_URL}/update-profile`,
+        data,
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
       console.log("PROFILE RESPONSE : ", response);
 
       if (!response.data.success) {
@@ -88,15 +96,18 @@ export function updateProfile(data, token) {
   };
 }
 
-
 export function fetchProfileDetails(token) {
   return async (dispatch) => {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-    const response = await apiConnector("GET", `${BASE_URL}/get-user-details`,     {
-      Authorization: `Bearer ${token}`,
-    });
+      const response = await apiConnector(
+        "GET",
+        `${BASE_URL}/get-user-details`,
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
       console.log("PROFILE RESPONSE : ", response);
 
       if (!response.data.success) {
@@ -114,15 +125,14 @@ export function fetchProfileDetails(token) {
   };
 }
 
-
 export function deleteUser(token) {
   return async (dispatch) => {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-    const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`,  {
-      Authorization: `Bearer ${token}`,
-    });
+      const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`, {
+        Authorization: `Bearer ${token}`,
+      });
       console.log("DELETE USER RESPONSE : ", response);
 
       if (!response.data.success) {

@@ -33,13 +33,11 @@ const userSchema = mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ["Male", "Female", "Other"],
   },
   phone: {
     type: String,
   },
 });
-
 
 // Pre hook before deleting a user
 userSchema.pre("findOneAndDelete", async function (next) {

@@ -1,14 +1,18 @@
 import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 
-function OpenRoute({ children }) {
-  const { token } = useSelector((state) => state.auth);
+const OpenRoute = ({ children }) => {
+  const { token, isVerified } = useSelector((state) => state.auth);
 
   if (token !== null) {
-    return <Navigate to="/expense" replace />;
+    // if profile not set up → go to profile setup
+    if (!isVerified) {
+      return <Navigate to="/profile-setup" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
-}
+};
 
 export default OpenRoute;

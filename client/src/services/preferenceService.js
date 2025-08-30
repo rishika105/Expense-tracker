@@ -9,7 +9,7 @@ export function addPreference(data, token) {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-      const response = await apiConnector("PUT", `${BASE_URL}/create`, data, {
+      const response = await apiConnector("POST", `${BASE_URL}/create`, data, {
         Authorization: `Bearer ${token}`,
       });
       console.log("PREFERENCES RESPONSE : ", response);
