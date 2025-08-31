@@ -3,10 +3,10 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   loading: false,
   token: localStorage.getItem("token")
-    ? JSON.parse(localStorage.getItem("token"))
+    ? localStorage.getItem("token")
     : null,
   isVerified: localStorage.getItem("isVerified")
-    ? JSON.parse(localStorage.getItem("isVerified"))
+    ? localStorage.getItem("isVerified")
     : null, // new field
 };
 

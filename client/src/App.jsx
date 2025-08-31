@@ -6,6 +6,8 @@ import PrivateRoute from "./guards/PrivateRoute";
 import AddExpense from "./pages/AddExpense";
 import ProfileSetup from "./components/ProfileSetup";
 import PreferencesSetup from "./components/PreferencesSetup";
+import ProfileDetails from "./pages/ProfileDetails";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
@@ -46,6 +48,17 @@ function App() {
             </PrivateRoute>
           }
         />
+
+          <Route
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        >
+            <Route path="dashboard/my-profile" element={<ProfileDetails />} />
+
+        </Route>
       </Routes>
     </div>
   );

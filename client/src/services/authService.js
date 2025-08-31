@@ -51,8 +51,8 @@ export function verifyEmail(email, otp, navigate) {
         navigate("/profile-setup");
       } else navigate("/dashboard");
 
-      localStorage.setItem("token", JSON.stringify(response.data.token)); //for persistence after log out or reload or when app reruns...the redux goes empty
-      localStorage.setItem("isVerified", JSON.stringify(response.data.verified))
+      localStorage.setItem("token", response.data.token); //for persistence after log out or reload or when app reruns...the redux goes empty
+      localStorage.setItem("isVerified", response.data.verified)
 
 
       toast.success("Log In success");
