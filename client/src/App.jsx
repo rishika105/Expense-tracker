@@ -8,6 +8,7 @@ import ProfileSetup from "./components/ProfileSetup";
 import PreferencesSetup from "./components/PreferencesSetup";
 import ProfileDetails from "./pages/ProfileDetails";
 import Dashboard from "./pages/Dashboard";
+import CurrencyConvertor from "./pages/CurrencyConvertor";
 
 function App() {
   return (
@@ -19,15 +20,6 @@ function App() {
             <OpenRoute>
               <Home />
             </OpenRoute>
-          }
-        />
-
-        <Route
-          path="/add-expense"
-          element={
-            <PrivateRoute>
-              <AddExpense />
-            </PrivateRoute>
           }
         />
 
@@ -49,15 +41,19 @@ function App() {
           }
         />
 
-          <Route
+        <Route
           element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
           }
         >
-            <Route path="dashboard/my-profile" element={<ProfileDetails />} />
-
+          <Route path="dashboard/my-profile" element={<ProfileDetails />} />
+          <Route path="/dashboard/add-expense" element={<AddExpense />} />
+          <Route
+            path="dashboard/currency-convertor"
+            element={<CurrencyConvertor />}
+          />
         </Route>
       </Routes>
     </div>

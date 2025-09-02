@@ -1,5 +1,5 @@
 import { apiConnector } from "../utils/apiConnector";
-import { setLoading } from "../slices/authSlice";
+import { setIsVerified, setLoading } from "../slices/authSlice";
 import toast from "react-hot-toast";
 
 const BASE_URL = `${import.meta.env.VITE_API_URL}/preference`;
@@ -17,6 +17,9 @@ export function addPreference(data, token) {
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
+
+      dispatch(setIsVerified(response.data.verified));
+      localStorage.setItem("isVerified", response.data.verified);
 
       toast.success("Adding preference completed!");
     } catch (error) {

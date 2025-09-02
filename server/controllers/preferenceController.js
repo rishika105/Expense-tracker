@@ -1,4 +1,5 @@
 const Preference = require("../models/Preference");
+const User = require("../models/User");
 
 exports.addPreferences = async (req, res) => {
   try {
@@ -25,11 +26,15 @@ exports.addPreferences = async (req, res) => {
       notifications,
       resetCycle,
     });
+      
+    //already verified can call this controller
+    let verified = true;
 
     return res.status(200).json({
       success: true,
       message: "Added expense Preferences successfully",
       preferences,
+      verified
     });
   } catch (error) {
     console.log(error);
