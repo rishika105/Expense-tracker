@@ -50,7 +50,7 @@ export function verifyEmail(email, otp, navigate) {
         navigate("/profile-setup");
       } else navigate("/dashboard");
 
-      localStorage.setItem("token", response.data.token); //for persistence after log out or reload or when app reruns...the redux goes empty
+      localStorage.setItem("token", response.data.token);
 
       toast.success("Log In success");
     } catch (error) {
@@ -93,41 +93,42 @@ export function updateProfile(data, token) {
   };
 }
 
-export function fetchProfileDetails(token) {
-  return async (dispatch) => {
-    dispatch(setLoading(true));
-    const toastId = toast.loading("Loading...");
-    try {
-      const response = await apiConnector(
-        "GET",
-        `${BASE_URL}/get-user-details`,
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      console.log("PROFILE RESPONSE : ", response);
-
-      if (!response.data.success) {
-        throw new Error(response.data.message);
+// Fixed: Now returns the response
+export const fetchProfileDetails = async (token) => {
+  const toastId = toast.loading("Loading...");
+  try {
+    const response = await apiConnector(
+      "GET",
+      `${BASE_URL}/get-user-details`, // Make sure this endpoint exists on your backend
+      null,
+      {
+        Authorization: `Bearer ${token}`,
       }
+    );
+    console.log("PROFILE RESPONSE : ", response);
 
-      // toast.success("Profile details completed!");
-    } catch (error) {
-      console.log("ERROR FETCHING PROFILE.....", error);
-      toast.error("Could not get profile details");
-    } finally {
-      dispatch(setLoading(false));
-      toast.dismiss(toastId);
+    if (!response.data.success) {
+      throw new Error(response.data.message);
     }
-  };
-}
+
+    
+
+    return response.data.user; // Return the data
+  } catch (error) {
+    console.log("ERROR FETCHING PROFILE.....", error);
+    toast.error("Could not get profile details");
+    return null; // Return null on error
+  } finally {
+    toast.dismiss(toastId);
+  }
+};
 
 export function deleteUser(token) {
   return async (dispatch) => {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-      const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`, {
+      const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`, null, {
         Authorization: `Bearer ${token}`,
       });
       console.log("DELETE USER RESPONSE : ", response);

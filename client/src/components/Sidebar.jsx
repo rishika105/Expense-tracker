@@ -1,14 +1,20 @@
-import { useState } from "react"
+import { useState } from "react";
 
 const Sidebar = ({ activeItem, setActiveItem }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
     {
       id: "dashboard",
       name: "Dashboard",
+      route: "/dashboard",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -27,8 +33,14 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "transactions",
       name: "Transactions",
+      route: "/dashboard/transactions",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -41,8 +53,14 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "categories",
       name: "Categories",
+      route: "/dashboard.categories",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -55,8 +73,14 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "budget",
       name: "Budget",
+      route: "/dashboard/budget",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -69,8 +93,14 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "converter",
       name: "Currency Converter",
+      route: "/dashboard/currency-convertor",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -84,7 +114,12 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
       id: "profile",
       name: "Profile & Settings",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,12 +129,12 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
         </svg>
       ),
     },
-  ]
+  ];
 
   const handleLogout = () => {
     // Add logout logic here
-    console.log("Logging out...")
-  }
+    console.log("Logging out...");
+  };
 
   return (
     <>
@@ -108,24 +143,43 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg border border-gray-200"
       >
-        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-6 h-6 text-gray-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           {isOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           )}
         </svg>
       </button>
 
       {/* Overlay for mobile */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setIsOpen(false)} />
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
       <div
         className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        h-screen
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
       >
@@ -134,7 +188,12 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
           <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -143,21 +202,25 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
                   />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-800">ExpenseTracker</span>
+              <span className="text-xl font-bold text-gray-800">
+                ExpenseTracker
+              </span>
             </div>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {menuItems.map((item) => (
-              <button
+              <a
                 key={item.id}
                 onClick={() => {
-                  setActiveItem(item.id)
-                  setIsOpen(false) // Close mobile menu
+                  setActiveItem(item.id);
+                  setIsOpen(false); // Close mobile menu
                 }}
+                href={item.route}
                 className={`
                   w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200
+                  cursor-pointer
                   ${
                     activeItem === item.id
                       ? "bg-blue-50 text-blue-600 border-r-2 border-blue-600"
@@ -167,7 +230,7 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
               >
                 {item.icon}
                 <span className="font-medium">{item.name}</span>
-              </button>
+              </a>
             ))}
           </nav>
 
@@ -178,8 +241,12 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
                 <span className="text-white text-sm font-medium">JD</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">John Doe</p>
-                <p className="text-xs text-gray-500 truncate">john@example.com</p>
+                <p className="text-sm font-medium text-gray-800 truncate">
+                  John Doe
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  john@example.com
+                </p>
               </div>
             </div>
 
@@ -187,7 +254,12 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
               onClick={handleLogout}
               className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -201,7 +273,7 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

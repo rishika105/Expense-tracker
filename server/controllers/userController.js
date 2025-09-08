@@ -180,15 +180,15 @@ exports.updateProfile = async (req, res) => {
 
 exports.getUserDetails = async (req, res) => {
   try {
-    const userId = req.user.id; //from middle ware
-    if (!userId) {
+    const email = req.user.email; //from middle ware
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: "User not found",
+        message: "Email not found",
       });
     }
 
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({

@@ -26,7 +26,7 @@ exports.addPreferences = async (req, res) => {
       notifications,
       resetCycle,
     });
-      
+
     //already verified can call this controller
     let verified = true;
 
@@ -34,7 +34,7 @@ exports.addPreferences = async (req, res) => {
       success: true,
       message: "Added expense Preferences successfully",
       preferences,
-      verified
+      verified,
     });
   } catch (error) {
     console.log(error);
@@ -55,7 +55,7 @@ exports.getPreferences = async (req, res) => {
       });
     }
 
-    const preferences = await Preference.findOne({ userId });
+    const preferences = await Preference.findOne({ user: userId });
 
     if (!preferences) {
       return res.status(404).json({
@@ -97,10 +97,10 @@ exports.updatePreferences = async (req, res) => {
       });
     }
 
-    const updatedPreferences = await Preference.findByIdAndUpdate(
-      { userId },
+    const updatedPreferences = await Preference.findOneAndUpdate(
+      { user: userId }, // ✅ find by userId
       { baseCurrency, monthlyBudget, notifications, resetCycle },
-      { new: true }
+      { new: true, upsert: true } // upsert creates if not found
     );
 
     return res.status(200).json({

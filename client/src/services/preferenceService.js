@@ -49,7 +49,7 @@ export function updatePreference(data, token) {
       toast.success("Preference update successfully!");
     } catch (error) {
       console.log("ERROR UPDATING PREFERENCES.....", error);
-      toast.error("Could not add profile details");
+      toast.error("Could not update preference details");
     } finally {
       dispatch(setLoading(false));
       toast.dismiss(toastId);
@@ -57,27 +57,25 @@ export function updatePreference(data, token) {
   };
 }
 
-export function fetchUserPreferences(token) {
-  return async (dispatch) => {
-    dispatch(setLoading(true));
-    const toastId = toast.loading("Loading...");
-    try {
-      const response = await apiConnector("GET", `${BASE_URL}`, {
-        Authorization: `Bearer ${token}`,
-      });
-      console.log("PREFERENCES RESPONSE : ", response);
+// Fixed: Now returns the response
+export const fetchUserPreferences = async (token) => {
+  const toastId = toast.loading("Loading...");
+  try {
+    const response = await apiConnector("GET", `${BASE_URL}`, null, {
+      Authorization: `Bearer ${token}`,
+    });
+    console.log("PREFERENCES RESPONSE : ", response);
 
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-
-      // toast.success("Preferences details completed!");
-    } catch (error) {
-      console.log("ERROR FETCHING PREFERENCES.....", error);
-      toast.error("Could not get preference details");
-    } finally {
-      dispatch(setLoading(false));
-      toast.dismiss(toastId);
+    if (!response.data.success) {
+      throw new Error(response.data.message);
     }
-  };
-}
+
+    return response.data.preferences; // Return the data
+  } catch (error) {
+    console.log("ERROR FETCHING PREFERENCES.....", error);
+    toast.error("Could not get preference details");
+    return null; // Return null on error
+  } finally {
+    toast.dismiss(toastId);
+  }
+};
