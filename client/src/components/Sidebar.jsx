@@ -1,7 +1,17 @@
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setIsVerified, setToken } from "../slices/authSlice";
+import { setUser } from "../slices/profileSlice";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import ConfirmationModal from "./ConfirmationModal";
 
 const Sidebar = ({ activeItem, setActiveItem }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useSelector((state) => state.profile);
+  const [confirmationModal, setConfirmationModal] = useState(null);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const menuItems = [
     {
@@ -53,7 +63,7 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "categories",
       name: "Categories",
-      route: "/dashboard.categories",
+      route: "/dashboard/categories",
       icon: (
         <svg
           className="w-5 h-5"
@@ -113,6 +123,7 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
     {
       id: "profile",
       name: "Profile & Settings",
+      route: "/dashboard/my-profile",
       icon: (
         <svg
           className="w-5 h-5"
@@ -132,8 +143,13 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
   ];
 
   const handleLogout = () => {
-    // Add logout logic here
-    console.log("Logging out...");
+    dispatch(setToken(null));
+    dispatch(setUser(null));
+    // dispatch(setIsVerified(null)); //setup will be used once so once true dont remove it
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    toast.success("Logged Out");
+    navigate("/");
   };
 
   return (
@@ -242,16 +258,24 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">
-                  John Doe
+                  {user.fullName}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
-                  john@example.com
-                </p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
             </div>
 
             <button
-              onClick={handleLogout}
+              onClick={() =>
+                setConfirmationModal({
+                  text1: "Confirm Logout",
+                  text2:
+                    "Are you sure you want to log out account? You will need to verify your email again after logging out",
+                  btn1Text: "Logout",
+                  btn2Text: "Cancel",
+                  btn1Handler: () => handleLogout(),
+                  btn2Handler: () => setConfirmationModal(null),
+                })
+              }
               className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
             >
               <svg
@@ -270,8 +294,15 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
               <span className="font-medium">Logout</span>
             </button>
           </div>
+          
         </div>
+  
       </div>
+            {confirmationModal ? (
+            <ConfirmationModal modalData={confirmationModal} />
+          ) : (
+            <div></div>
+          )}
     </>
   );
 };

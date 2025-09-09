@@ -12,7 +12,7 @@ export function addPreference(data, token) {
       const response = await apiConnector("POST", `${BASE_URL}/create`, data, {
         Authorization: `Bearer ${token}`,
       });
-      console.log("PREFERENCES RESPONSE : ", response);
+      // console.log("PREFERENCES RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);
@@ -40,7 +40,7 @@ export function updatePreference(data, token) {
       const response = await apiConnector("PUT", `${BASE_URL}/update`, data, {
         Authorization: `Bearer ${token}`,
       });
-      console.log("PREFERENCES RESPONSE : ", response);
+      // console.log("PREFERENCES RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);
@@ -64,7 +64,7 @@ export const fetchUserPreferences = async (token) => {
     const response = await apiConnector("GET", `${BASE_URL}`, null, {
       Authorization: `Bearer ${token}`,
     });
-    console.log("PREFERENCES RESPONSE : ", response);
+    // console.log("PREFERENCES RESPONSE : ", response);
 
     if (!response.data.success) {
       throw new Error(response.data.message);

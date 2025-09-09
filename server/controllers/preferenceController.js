@@ -100,7 +100,7 @@ exports.updatePreferences = async (req, res) => {
     const updatedPreferences = await Preference.findOneAndUpdate(
       { user: userId }, // ✅ find by userId
       { baseCurrency, monthlyBudget, notifications, resetCycle },
-      { new: true, upsert: true } // upsert creates if not found
+      { new: true } // upsert creates if not found
     );
 
     return res.status(200).json({

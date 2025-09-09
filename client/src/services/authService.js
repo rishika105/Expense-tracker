@@ -1,6 +1,7 @@
 import { apiConnector } from "../utils/apiConnector";
 import { setIsVerified, setLoading, setToken } from "../slices/authSlice";
 import toast from "react-hot-toast";
+import { setUser } from "../slices/profileSlice";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -38,19 +39,21 @@ export function verifyEmail(email, otp, navigate) {
         email,
         otp,
       });
-      console.log("VERIFY EMAIL RESPONSE : ", response);
+      // console.log("VERIFY EMAIL RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
 
       dispatch(setToken(response.data.token));
+      dispatch(setUser(response.data.user));
 
       if (!response.data.verified) {
         navigate("/profile-setup");
       } else navigate("/dashboard");
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", response.data.user)
 
       toast.success("Log In success");
     } catch (error) {
@@ -76,7 +79,7 @@ export function updateProfile(data, token) {
           Authorization: `Bearer ${token}`,
         }
       );
-      console.log("PROFILE RESPONSE : ", response);
+      // console.log("PROFILE RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);
@@ -105,13 +108,11 @@ export const fetchProfileDetails = async (token) => {
         Authorization: `Bearer ${token}`,
       }
     );
-    console.log("PROFILE RESPONSE : ", response);
+    // console.log("PROFILE RESPONSE : ", response);
 
     if (!response.data.success) {
       throw new Error(response.data.message);
     }
-
-    
 
     return response.data.user; // Return the data
   } catch (error) {
@@ -131,7 +132,7 @@ export function deleteUser(token) {
       const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`, null, {
         Authorization: `Bearer ${token}`,
       });
-      console.log("DELETE USER RESPONSE : ", response);
+      // console.log("DELETE USER RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);

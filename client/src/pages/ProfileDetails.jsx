@@ -5,18 +5,14 @@ import {
   updateProfile,
   deleteUser,
 } from "../services/authService";
-import {
-  fetchUserPreferences,
-  updatePreference,
-} from "../services/preferenceService";
-import Sidebar from "../components/Sidebar";
+import PreferenceDetails from "../components/PreferenceDetails";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const ProfileDetails = () => {
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isEditingPref, setIsEditingPref] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState(null);
 
   const [profileData, setProfileData] = useState({
     fullName: "",
@@ -27,13 +23,6 @@ const ProfileDetails = () => {
     phone: "",
   });
 
-  const [preferencesData, setPreferencesData] = useState({
-    baseCurrency: "INR",
-    monthlyBudget: "",
-    notifications: true,
-    resetCycle: "monthly",
-  });
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -41,12 +30,6 @@ const ProfileDetails = () => {
         const profileResponse = await fetchProfileDetails(token);
         if (profileResponse) {
           setProfileData(profileResponse);
-        }
-
-        // Fetch preferences data
-        const prefResponse = await fetchUserPreferences(token);
-        if (prefResponse) {
-          setPreferencesData(prefResponse);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -65,49 +48,23 @@ const ProfileDetails = () => {
     });
   };
 
-  const handlePreferenceChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    if (name.includes(".")) {
-      const [parent, child] = name.split(".");
-      setPreferencesData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: type === "checkbox" ? checked : value,
-        },
-      }));
-    } else {
-      setPreferencesData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    }
-  };
-
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     await dispatch(updateProfile(profileData, token));
     setIsEditing(false);
   };
 
-  const handleUpdatePreferences = async (e) => {
-    e.preventDefault();
-    await dispatch(updatePreference(preferencesData, token));
-    setIsEditingPref(false);
-  };
-
   const handleDeleteAccount = async () => {
     await dispatch(deleteUser(token));
-    setShowDeleteModal(false);
+    setConfirmationModal(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="flex">
         {/* Main Content */}
-        <div className="flex ml-2 md:ml-72 p-8">
-          <div className="w-fit">
+        <div className="flex ml-2 md:ml-72 p-8 w-screen">
+          <div className="w-full md:w-[80%]">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">
@@ -120,19 +77,18 @@ const ProfileDetails = () => {
 
             {/* Single Line Navigation */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="border-b border-slate-200 flex space-x-8 px-6 py-4">
-                <h2 className="text-xl font-semibold text-slate-800">
-                  Profile Information
-                </h2>
-              </div>
+              <h2 className="text-xl font-semibold text-slate-800 p-8 pb-0">
+                Profile Information
+              </h2>
+              <div class="border-b border-slate-200 p-4 w-[95%] text-center ml-4"></div>
 
-              <div className="p-8 max-w-4xl">
+              <div className="p-8 max-w-full">
                 {/* Profile */}
                 <div>
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex">
                     <button
                       onClick={() => setIsEditing(!isEditing)}
-                      className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors duration-200"
+                      className="px-4 py-2 ml-auto text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors duration-200"
                     >
                       {isEditing ? "Cancel" : "Edit Profile"}
                     </button>
@@ -265,131 +221,10 @@ const ProfileDetails = () => {
                 </div>
 
                 {/* Preferences  */}
-                <div>
-                  <div className="border-b border-slate-200 flex space-x-8 px-6 py-4">
-                    <h2 className="text-xl font-semibold text-slate-800 mb-6">
-                      Your Preferences
-                    </h2>
-                  </div>
-
-                  <button
-                    onClick={() => setIsEditingPref(!isEditingPref)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors duration-200"
-                  >
-                    {isEditingPref ? "Cancel" : "Edit Preference"}
-                  </button>
-
-                  <form
-                    onSubmit={handleUpdatePreferences}
-                    className="space-y-6"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Base Currency
-                        </label>
-                        <select
-                          name="baseCurrency"
-                          value={preferencesData?.baseCurrency || "INR"}
-                          onChange={handlePreferenceChange}
-                          disabled={!isEditingPref}
-                          className={`w-full px-4 py-3 border border-slate-200 rounded-xl transition-all duration-200 text-slate-700 ${
-                            isEditingPref
-                              ? "focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              : "bg-slate-50"
-                          }`}
-                        >
-                          <option value="USD">$ US Dollar</option>
-                          <option value="EUR">€ Euro</option>
-                          <option value="GBP">£ British Pound</option>
-                          <option value="INR">₹ Indian Rupee</option>
-                          <option value="JPY">¥ Japanese Yen</option>
-                          <option value="CAD">C$ Canadian Dollar</option>
-                          <option value="AUD">A$ Australian Dollar</option>
-                        </select>
-                        <p className="text-sm text-slate-500 mt-1">
-                          All analytics and totals are calculated in this
-                          currency
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Monthly Budget
-                        </label>
-                        <input
-                          type="number"
-                          name="monthlyBudget"
-                          value={preferencesData?.monthlyBudget || ""}
-                          onChange={handlePreferenceChange}
-                          disabled={!isEditingPref}
-                          className={`w-full px-4 py-3 border border-slate-200 rounded-xl transition-all duration-200 text-slate-700 ${
-                            isEditingPref
-                              ? "focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              : "bg-slate-50"
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        Budget Reset Cycle
-                      </label>
-                      <select
-                        name="resetCycle"
-                        value={preferencesData?.resetCycle || "monthly"}
-                        onChange={handlePreferenceChange}
-                        disabled={!isEditingPref}
-                        className={`w-full px-4 py-3 border border-slate-200 rounded-xl transition-all duration-200 text-slate-700 ${
-                          isEditingPref
-                            ? "focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            : "bg-slate-50"
-                        }`}
-                      >
-                        <option value="monthly">Monthly</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="notifications"
-                          checked={preferencesData?.notifications || false}
-                          onChange={handlePreferenceChange}
-                          disabled={!isEditingPref}
-                          className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                        />
-                        <div>
-                          <span className="text-slate-700 font-medium">
-                            Enable Notifications
-                          </span>
-                          <p className="text-sm text-slate-500">
-                            Receive budget alerts and important updates
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-
-                    <div className="pt-4">
-                      <button
-                        onClick={() => setIsEditingPref(!isEditingPref)}
-                        type="submit"
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
-                      >
-                        {isEditingPref
-                          ? "Update Preferences"
-                          : "Edit Preferences"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                <PreferenceDetails />
 
                 {/* Account Management  */}
-                <div>
+                <div className="mt-8">
                   <div className="space-y-6">
                     <div className="bg-red-50 border border-red-200 rounded-xl p-6">
                       <h3 className="text-lg font-semibold text-red-800 mb-2">
@@ -400,7 +235,17 @@ const ProfileDetails = () => {
                         Please be certain.
                       </p>
                       <button
-                        onClick={() => setShowDeleteModal(true)}
+                        onClick={() =>
+                          setConfirmationModal({
+                            text1: "Confirm Account Deletion",
+                            text2:
+                              "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed",
+                            btn1Text: "Delete",
+                            btn2Text: "Cancel",
+                            btn1Handler: () => handleDeleteAccount(),
+                            btn2Handler: () => setConfirmationModal(null),
+                          })
+                        }
                         className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors duration-200"
                       >
                         Delete Account
@@ -412,33 +257,10 @@ const ProfileDetails = () => {
             </div>
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                    Confirm Account Deletion
-                  </h3>
-                  <p className="text-slate-600 mb-6">
-                    Are you sure you want to delete your account? This action
-                    cannot be undone and all your data will be permanently
-                    removed.
-                  </p>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setShowDeleteModal(false)}
-                      className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDeleteAccount}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-                    >
-                      Delete Account
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {confirmationModal ? (
+              <ConfirmationModal modalData={confirmationModal} />
+            ) : (
+              <div></div>
             )}
           </div>
         </div>
