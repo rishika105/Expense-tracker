@@ -5,6 +5,7 @@ import { setUser } from "../slices/profileSlice";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "./ConfirmationModal";
+import userIcon from "../assets/user icon.jpeg";
 
 const Sidebar = ({ activeItem, setActiveItem }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -252,17 +253,18 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
 
           {/* User section & Logout */}
           <div className="px-4 py-4 border-t border-gray-200">
-            <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50 mb-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">JD</span>
-              </div>
+            <a className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50 mb-3" href="/dashboard/my-profile">
+              <img
+                src={userIcon}
+                className="object-contain w-[40px] h-[40px]"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {user.fullName}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
-            </div>
+            </a>
 
             <button
               onClick={() =>
@@ -294,15 +296,13 @@ const Sidebar = ({ activeItem, setActiveItem }) => {
               <span className="font-medium">Logout</span>
             </button>
           </div>
-          
         </div>
-  
       </div>
-            {confirmationModal ? (
-            <ConfirmationModal modalData={confirmationModal} />
-          ) : (
-            <div></div>
-          )}
+      {confirmationModal ? (
+        <ConfirmationModal modalData={confirmationModal} />
+      ) : (
+        <div></div>
+      )}
     </>
   );
 };

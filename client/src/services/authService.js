@@ -53,7 +53,7 @@ export function verifyEmail(email, otp, navigate) {
       } else navigate("/dashboard");
 
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", response.data.user)
+      localStorage.setItem("user", JSON.stringify(response.data.user)); //not to store as [object object]
 
       toast.success("Log In success");
     } catch (error) {
@@ -124,19 +124,32 @@ export const fetchProfileDetails = async (token) => {
   }
 };
 
-export function deleteUser(token) {
+export function deleteUser(token, navigate) {
   return async (dispatch) => {
     dispatch(setLoading(true));
     const toastId = toast.loading("Loading...");
     try {
-      const response = await apiConnector("DELETE", `${BASE_URL}/delete-user`, null, {
-        Authorization: `Bearer ${token}`,
-      });
+      const response = await apiConnector(
+        "DELETE",
+        `${BASE_URL}/delete-user`,
+        null,
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
       // console.log("DELETE USER RESPONSE : ", response);
 
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
+
+      //logout from the frontend
+      //also removed the verfied state coz all the data is deleted
+      dispatch(setToken(null));
+      dispatch(setUser(null));
+      dispatch(setIsVerified(null));
+      localStorage.clear();
+      navigate("/");
 
       toast.success("User deleted Successfully!");
     } catch (error) {

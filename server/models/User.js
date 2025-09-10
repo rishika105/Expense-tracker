@@ -40,7 +40,7 @@ const userSchema = mongoose.Schema({
 });
 
 // Pre hook before deleting a user
-userSchema.pre("findOneAndDelete", async function (next) {
+userSchema.pre("findByIdAndDelete", async function (next) {
   const user = await this.model.findOne(this.getFilter());
   if (user) {
     await Preference.deleteOne({ userId: user._id });

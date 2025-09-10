@@ -7,9 +7,11 @@ import {
 } from "../services/authService";
 import PreferenceDetails from "../components/PreferenceDetails";
 import ConfirmationModal from "../components/ConfirmationModal";
+import { useNavigate } from "react-router-dom";
 
 const ProfileDetails = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState(null);
@@ -55,7 +57,7 @@ const ProfileDetails = () => {
   };
 
   const handleDeleteAccount = async () => {
-    await dispatch(deleteUser(token));
+    await dispatch(deleteUser(token, navigate));
     setConfirmationModal(false);
   };
 

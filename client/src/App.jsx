@@ -9,6 +9,7 @@ import PreferencesSetup from "./components/PreferencesSetup";
 import ProfileDetails from "./pages/ProfileDetails";
 import Dashboard from "./pages/Dashboard";
 import CurrencyConvertor from "./pages/CurrencyConvertor";
+import Error from "./components/Error";
 
 function App() {
   return (
@@ -55,6 +56,8 @@ function App() {
             element={<CurrencyConvertor />}
           />
         </Route>
+
+        <Route path="*" element={<Error />} />
       </Routes>
     </div>
   );

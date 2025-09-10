@@ -129,6 +129,7 @@ exports.verifyOtp = async (req, res) => {
       message: "OTP verified successfully",
       token,
       verified,
+      user,
     });
   } catch (error) {
     console.error("Error in verifying otp:", error);
@@ -221,12 +222,11 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
-    await User.findOneAndDelete({ userId });
+    await User.findByIdAndDelete(userId);
 
     return res.status(200).json({
       success: true,
       message: "User deleted successfully",
-      user,
     });
   } catch (error) {
     console.log(error);
