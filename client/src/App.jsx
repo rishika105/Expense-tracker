@@ -10,6 +10,9 @@ import ProfileDetails from "./pages/ProfileDetails";
 import Dashboard from "./pages/Dashboard";
 import CurrencyConvertor from "./pages/CurrencyConvertor";
 import Error from "./components/Error";
+import Analytics from "./pages/Analytics";
+import Budget from "./pages/Budget";
+import Transactions from "./pages/Transactions";
 
 function App() {
   return (
@@ -51,6 +54,9 @@ function App() {
         >
           <Route path="dashboard/my-profile" element={<ProfileDetails />} />
           <Route path="/dashboard/add-expense" element={<AddExpense />} />
+          <Route path="/dashboard/analytics" element={<Analytics/>}/>
+          <Route path="/dashboard/budget" element={<Budget/>}/>
+          <Route path="/dashboard/transactions" element={<Transactions/>}/>
           <Route
             path="dashboard/currency-convertor"
             element={<CurrencyConvertor />}

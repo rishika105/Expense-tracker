@@ -167,7 +167,6 @@ const PreferenceDetails = () => {
         <div className="pt-4">
           {isEditingPref ? (
             <button
-              onClick={() => setIsEditingPref(!isEditingPref)}
               type="submit"
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
             >

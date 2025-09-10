@@ -9,7 +9,7 @@ const OpenRoute = ({ children }) => {
     if (!isVerified) {
       return <Navigate to="/profile-setup" replace />;
     }
-    return <Navigate to="/dashboard/my-profile" replace />;
+    return <Navigate to="/dashboard/add-expense" replace />;
   }
 
   return children;

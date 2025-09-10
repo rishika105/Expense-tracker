@@ -50,7 +50,7 @@ export function verifyEmail(email, otp, navigate) {
 
       if (!response.data.verified) {
         navigate("/profile-setup");
-      } else navigate("/dashboard");
+      } else navigate("/dashboard/my-profile");
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user)); //not to store as [object object]
