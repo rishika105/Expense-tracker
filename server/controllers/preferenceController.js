@@ -12,6 +12,7 @@ exports.addPreferences = async (req, res) => {
     }
     const { baseCurrency, monthlyBudget, notifications, resetCycle } = req.body;
 
+    const user = User.findById(id);
     if (!baseCurrency || !monthlyBudget || !notifications || !resetCycle) {
       return res.status(400).json({
         success: false,
@@ -89,6 +90,7 @@ exports.updatePreferences = async (req, res) => {
     }
 
     const { baseCurrency, monthlyBudget, notifications, resetCycle } = req.body;
+    const user = User.findById(userId);
 
     if (!baseCurrency || !monthlyBudget || !notifications || !resetCycle) {
       return res.status(400).json({

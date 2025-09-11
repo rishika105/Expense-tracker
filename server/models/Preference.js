@@ -13,7 +13,7 @@ const preferenceSchema = mongoose.Schema(
       default: "INR", // could be USD, EUR, etc.
       required: true,
     },
-    monthlyBudget: {
+    budget: {
       type: Number,
       default: 0, // user can set a budget
       required: true,

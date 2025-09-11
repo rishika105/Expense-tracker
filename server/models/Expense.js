@@ -16,9 +16,12 @@ const expenseSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    description: {
+      type: String,
+    },
     amount: {
       type: Number,
-      required: true,
+      required: true,  //eg: 5 
     },
     currency: {
       type: String,
@@ -27,6 +30,7 @@ const expenseSchema = new mongoose.Schema(
     baseAmount: {
       type: Number,
       required: true, // converted to base currency value
+      // 5 USD -> If base currency is INR ->  440.07
     },
     baseCurrency: {
       type: String,
@@ -34,8 +38,7 @@ const expenseSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["Food", "Travel", "Shopping", "Bills", "Other"],
-      default: "Other",
+      required: true,  //food, travel
     },
     date: {
       type: Date,
@@ -45,10 +48,6 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       enum: ["Cash", "Credit Card", "Debit Card", "UPI", "Bank Transfer", "Other"],
       default: "Other",
-    },
-    notes: {
-      type: String,
-      trim: true,
     },
   },
   { timestamps: true }

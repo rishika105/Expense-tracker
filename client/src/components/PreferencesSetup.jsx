@@ -1,45 +1,59 @@
-import { useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import { useNavigate } from "react-router-dom"
-import { addPreference } from "../services/preferenceService"
-import { currencies } from "currencies.json"
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { addPreference } from "../services/preferenceService";
+import { currencies } from "currencies.json";
+import { fetchCurrencies } from "../services/currencyApi";
 
 const PreferencesSetup = () => {
   // console.log(currencies)
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
-  const { token } = useSelector((state) => state.auth)
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { token } = useSelector((state) => state.auth);
+  const [currencies, setCurrencies] = useState([]);
 
   const [formData, setFormData] = useState({
     baseCurrency: "INR",
     monthlyBudget: "",
     notifications: true,
     resetCycle: "monthly",
-  })
-
+  });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
-    }))
-  }
+    }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    console.log("Preferences data:", formData)
-    await dispatch(addPreference(formData, token))
-    navigate("/dashboard")
-  }
+    e.preventDefault();
+    console.log("Preferences data:", formData);
+    await dispatch(addPreference(formData, token));
+    navigate("/dashboard/my-profile");
+  };
+
+  const fetchAllCurrencies = async () => {
+    const response = await fetchCurrencies();
+    setCurrencies(response);
+  };
+
+  useEffect(() => {
+    fetchAllCurrencies();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Personalize Your Experience</h1>
-          <p className="text-slate-600">Set up your preferences to get the most out of your expense tracking</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
+            Personalize Your Experience
+          </h1>
+          <p className="text-slate-600">
+            Set up your preferences to get the most out of your expense tracking
+          </p>
         </div>
 
         {/* Form Card */}
@@ -47,7 +61,9 @@ const PreferencesSetup = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Base Currency */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Base Currency</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Base Currency
+              </label>
               <select
                 name="baseCurrency"
                 value={formData.baseCurrency}
@@ -56,19 +72,23 @@ const PreferencesSetup = () => {
               >
                 {currencies.map((currency) => (
                   <option key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.name}
+                    {currency.code} - {currency.name}
                   </option>
                 ))}
               </select>
               <p className="text-sm text-slate-500 mt-2">
-                This is your preferred currency for entering expenses. You can always change the currency while adding
-                transactions, but all analytics and totals will be converted and calculated in this base currency only.
+                This is your preferred currency for entering expenses. You can
+                always change the currency while adding transactions, but all
+                analytics and totals will be converted and calculated in this
+                base currency only.
               </p>
             </div>
 
             {/* Monthly Budget */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Budget</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Monthly Budget
+              </label>
               <input
                 type="number"
                 name="monthlyBudget"
@@ -78,7 +98,8 @@ const PreferencesSetup = () => {
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-700"
               />
               <p className="text-sm text-slate-500 mt-2">
-                Set a monthly spending limit to help track your expenses and receive budget alerts.
+                Set a monthly spending limit to help track your expenses and
+                receive budget alerts.
               </p>
             </div>
 
@@ -93,9 +114,12 @@ const PreferencesSetup = () => {
                   className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                 />
                 <div>
-                  <span className="text-slate-700 font-semibold">Enable Notifications</span>
+                  <span className="text-slate-700 font-semibold">
+                    Enable Notifications
+                  </span>
                   <p className="text-sm text-slate-500">
-                    Receive alerts for budget limits, reminders, and important updates
+                    Receive alerts for budget limits, reminders, and important
+                    updates
                   </p>
                 </div>
               </label>
@@ -103,7 +127,9 @@ const PreferencesSetup = () => {
 
             {/* Reset Cycle */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Budget Reset Cycle</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Budget Reset Cycle
+              </label>
               <select
                 name="resetCycle"
                 value={formData.resetCycle}
@@ -115,7 +141,8 @@ const PreferencesSetup = () => {
                 <option value="yearly">Yearly</option>
               </select>
               <p className="text-sm text-slate-500 mt-2">
-                Choose how often your budget and spending statistics should reset.
+                Choose how often your budget and spending statistics should
+                reset.
               </p>
             </div>
 
@@ -142,7 +169,7 @@ const PreferencesSetup = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PreferencesSetup
+export default PreferencesSetup;

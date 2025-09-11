@@ -1,15 +1,16 @@
-import { currencies } from "currencies.json";
 import React, { useEffect, useState } from "react";
 import {
   fetchUserPreferences,
   updatePreference,
 } from "../services/preferenceService";
 import { useDispatch, useSelector } from "react-redux";
+import { fetchCurrencies } from "../services/currencyApi";
 
 const PreferenceDetails = () => {
   const [isEditingPref, setIsEditingPref] = useState(false);
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
+  const [currencies, setCurrencies] = useState([]);
   const [preferencesData, setPreferencesData] = useState({
     baseCurrency: "INR",
     monthlyBudget: "",
@@ -36,6 +37,15 @@ const PreferenceDetails = () => {
       }));
     }
   };
+
+  const fetchAllCurrencies = async () => {
+    const response = await fetchCurrencies();
+    setCurrencies(response);
+  };
+
+  useEffect(() => {
+    fetchAllCurrencies();
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -94,18 +104,18 @@ const PreferenceDetails = () => {
             >
               {currencies.map((currency) => (
                 <option key={currency.code} value={currency.code}>
-                  {currency.symbol} {currency.name}
+                  {currency.code} - {currency.name}
                 </option>
               ))}
             </select>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 mt-2">
               All analytics and totals are calculated in this currency
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Monthly Budget
+              Your Budget
             </label>
             <input
               type="number"
@@ -119,9 +129,12 @@ const PreferenceDetails = () => {
                   : "bg-slate-50"
               }`}
             />
+            <p className="text-sm text-slate-500 mt-2">
+              This is your budget for your one reset cycle. You will get alerts
+              if budget exceeds your limit.
+            </p>
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Budget Reset Cycle
@@ -141,6 +154,9 @@ const PreferenceDetails = () => {
             <option value="weekly">Weekly</option>
             <option value="yearly">Yearly</option>
           </select>
+          <p className="text-sm text-slate-500 mt-2">
+            Your budget limit will reset {preferencesData.resetCycle}.
+          </p>
         </div>
 
         <div>

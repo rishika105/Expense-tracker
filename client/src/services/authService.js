@@ -46,14 +46,12 @@ export function verifyEmail(email, otp, navigate) {
       }
 
       dispatch(setToken(response.data.token));
-      dispatch(setUser(response.data.user));
 
       if (!response.data.verified) {
         navigate("/profile-setup");
       } else navigate("/dashboard/my-profile");
 
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user)); //not to store as [object object]
 
       toast.success("Log In success");
     } catch (error) {
@@ -84,6 +82,8 @@ export function updateProfile(data, token) {
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
+      dispatch(setUser(response.data.updatedUser));
+      localStorage.setItem("user", JSON.stringify(response.data.updatedUser)); //not to store as [object object]
 
       toast.success("Profile details completed!");
     } catch (error) {
