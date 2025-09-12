@@ -1,6 +1,5 @@
 const { default: Expense } = require("../models/Expense");
 const Preference = require("../models/Preference");
-const fetch = require("node-fetch"); // for server-side API calls
 const emailSender = require("../utils/emailSender");
 
 const primaryApiBase =
@@ -241,7 +240,7 @@ exports.addExpense = async (req, res) => {
 
     // Check if budget is exceeded and send email if notifications are enabled
     if (budget > 0 && currentTotal > budget && preference?.notifications) {
-      const frontendUrl = process.env.VITE_API_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl =  process.env.FRONTEND_URL || 'http://localhost:5173';
       
       try {
         await emailSender(

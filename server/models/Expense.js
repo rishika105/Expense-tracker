@@ -21,7 +21,7 @@ const expenseSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: true,  //eg: 5 
+      required: true, //eg: 5
     },
     currency: {
       type: String,
@@ -38,7 +38,7 @@ const expenseSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,  //food, travel
+      required: true, //food, travel
     },
     date: {
       type: Date,
@@ -46,7 +46,16 @@ const expenseSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["Cash", "Credit Card", "Debit Card", "UPI", "Bank Transfer", "Other"],
+      enum: [
+        "Cash",
+        "Credit Card",
+        "Debit Card",
+        "UPI",
+        "Net Banking",
+        "Digital Wallet",
+        "Cheque",
+        "Other",
+      ],
       default: "Other",
     },
   },
@@ -54,6 +63,3 @@ const expenseSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("Expense", expenseSchema);
-
-
-
