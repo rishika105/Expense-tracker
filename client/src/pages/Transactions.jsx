@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 const Transactions = () => {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [filters, setFilters] = useState({
     category: "",
     startDate: "",
@@ -20,78 +21,9 @@ const Transactions = () => {
     hasPrev: false,
   })
 
-  // Mock data for demonstration - replace with actual API call
-  const mockTransactions = [
-    {
-      _id: "1",
-      title: "Grocery Shopping",
-      description: "Weekly groceries from supermarket",
-      amount: 120.5,
-      currency: "USD",
-      baseAmount: 120.5,
-      baseCurrency: "USD",
-      category: "Food",
-      paymentMethod: "Credit Card",
-      date: "2024-01-15T10:30:00Z",
-      createdAt: "2024-01-15T10:30:00Z",
-    },
-    {
-      _id: "2",
-      title: "Gas Station",
-      description: "Fuel for car",
-      amount: 45.0,
-      currency: "USD",
-      baseAmount: 45.0,
-      baseCurrency: "USD",
-      category: "Transport",
-      paymentMethod: "Debit Card",
-      date: "2024-01-14T08:15:00Z",
-      createdAt: "2024-01-14T08:15:00Z",
-    },
-    {
-      _id: "3",
-      title: "Netflix Subscription",
-      description: "Monthly streaming service",
-      amount: 15.99,
-      currency: "USD",
-      baseAmount: 15.99,
-      baseCurrency: "USD",
-      category: "Entertainment",
-      paymentMethod: "Credit Card",
-      date: "2024-01-13T12:00:00Z",
-      createdAt: "2024-01-13T12:00:00Z",
-    },
-    {
-      _id: "4",
-      title: "Coffee Shop",
-      description: "Morning coffee and pastry",
-      amount: 8.5,
-      currency: "USD",
-      baseAmount: 8.5,
-      baseCurrency: "USD",
-      category: "Food",
-      paymentMethod: "Cash",
-      date: "2024-01-12T07:45:00Z",
-      createdAt: "2024-01-12T07:45:00Z",
-    },
-    {
-      _id: "5",
-      title: "Rent Payment",
-      description: "Monthly apartment rent",
-      amount: 1200.0,
-      currency: "USD",
-      baseAmount: 1200.0,
-      baseCurrency: "USD",
-      category: "Housing",
-      paymentMethod: "Bank Transfer",
-      date: "2024-01-01T09:00:00Z",
-      createdAt: "2024-01-01T09:00:00Z",
-    },
-  ]
-
   const categories = [
     "Food",
-    "Transport",
+    "Transport", 
     "Housing",
     "Entertainment",
     "Shopping",
@@ -103,43 +35,68 @@ const Transactions = () => {
 
   const paymentMethods = ["Credit Card", "Debit Card", "Cash", "Bank Transfer", "Digital Wallet"]
 
-  // Simulate API call
+  // API call to fetch transactions
   const fetchTransactions = async () => {
     setLoading(true)
+    setError(null)
+    
     try {
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      // Build query parameters
+      const queryParams = new URLSearchParams()
+      
+      if (filters.category) queryParams.append('category', filters.category)
+      if (filters.startDate) queryParams.append('startDate', filters.startDate)
+      if (filters.endDate) queryParams.append('endDate', filters.endDate)
+      queryParams.append('page', filters.page.toString())
+      queryParams.append('limit', filters.limit.toString())
 
-      // Filter mock data based on current filters
-      let filteredData = [...mockTransactions]
-
-      if (filters.category) {
-        filteredData = filteredData.filter((t) => t.category === filters.category)
-      }
-
-      if (filters.startDate) {
-        filteredData = filteredData.filter((t) => new Date(t.date) >= new Date(filters.startDate))
-      }
-
-      if (filters.endDate) {
-        filteredData = filteredData.filter((t) => new Date(t.date) <= new Date(filters.endDate))
-      }
-
-      // Simulate pagination
-      const startIndex = (filters.page - 1) * filters.limit
-      const endIndex = startIndex + filters.limit
-      const paginatedData = filteredData.slice(startIndex, endIndex)
-
-      setTransactions(paginatedData)
-      setPagination({
-        currentPage: filters.page,
-        totalPages: Math.ceil(filteredData.length / filters.limit),
-        totalCount: filteredData.length,
-        hasNext: endIndex < filteredData.length,
-        hasPrev: filters.page > 1,
+      // Replace with your actual API endpoint
+      const response = await fetch(`/api/expenses?${queryParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth
+        }
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Map backend expense structure to frontend transaction structure
+        const mappedTransactions = data.expenses.map(expense => ({
+          _id: expense._id,
+          title: expense.title,
+          description: expense.description || '',
+          amount: expense.amount,
+          currency: expense.currency,
+          baseAmount: expense.baseAmount,
+          baseCurrency: expense.baseCurrency,
+          category: expense.category,
+          paymentMethod: expense.paymentMethod,
+          date: expense.date,
+          createdAt: expense.createdAt
+        }))
+
+        setTransactions(mappedTransactions)
+        setPagination(data.pagination)
+      } else {
+        throw new Error(data.message || 'Failed to fetch transactions')
+      }
     } catch (error) {
       console.error("Error fetching transactions:", error)
+      setError(error.message)
+      setTransactions([])
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        hasNext: false,
+        hasPrev: false,
+      })
     } finally {
       setLoading(false)
     }
@@ -158,10 +115,12 @@ const Transactions = () => {
   }
 
   const handlePageChange = (newPage) => {
-    setFilters((prev) => ({
-      ...prev,
-      page: newPage,
-    }))
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setFilters((prev) => ({
+        ...prev,
+        page: newPage,
+      }))
+    }
   }
 
   const getCategoryIcon = (category) => {
@@ -192,6 +151,93 @@ const Transactions = () => {
       style: "currency",
       currency: currency || "USD",
     }).format(amount)
+  }
+
+  const clearFilters = () => {
+    setFilters({
+      category: "",
+      startDate: "",
+      endDate: "",
+      page: 1,
+      limit: 10,
+    })
+  }
+
+  const renderPaginationButtons = () => {
+    const buttons = []
+    const { currentPage, totalPages } = pagination
+    
+    // Always show first page
+    if (totalPages > 0) {
+      buttons.push(
+        <button
+          key={1}
+          onClick={() => handlePageChange(1)}
+          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            1 === currentPage
+              ? "bg-blue-600 text-white"
+              : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
+          }`}
+        >
+          1
+        </button>
+      )
+    }
+
+    // Show ellipsis if there's a gap
+    if (currentPage > 4 && totalPages > 7) {
+      buttons.push(
+        <span key="ellipsis1" className="px-2 py-2 text-slate-500">...</span>
+      )
+    }
+
+    // Show pages around current page
+    const start = Math.max(2, currentPage - 1)
+    const end = Math.min(totalPages - 1, currentPage + 1)
+    
+    for (let i = start; i <= end; i++) {
+      if (i !== 1 && i !== totalPages) { // Don't duplicate first/last
+        buttons.push(
+          <button
+            key={i}
+            onClick={() => handlePageChange(i)}
+            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              i === currentPage
+                ? "bg-blue-600 text-white"
+                : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            {i}
+          </button>
+        )
+      }
+    }
+
+    // Show ellipsis if there's a gap before last page
+    if (currentPage < totalPages - 3 && totalPages > 7) {
+      buttons.push(
+        <span key="ellipsis2" className="px-2 py-2 text-slate-500">...</span>
+      )
+    }
+
+    // Always show last page if it's not the first page
+    if (totalPages > 1) {
+      buttons.push(
+        <button
+          key={totalPages}
+          onClick={() => handlePageChange(totalPages)}
+          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            totalPages === currentPage
+              ? "bg-blue-600 text-white"
+              : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
+          }`}
+        >
+          {totalPages}
+        </button>
+      )
+    }
+
+    return buttons
   }
 
   return (
@@ -258,6 +304,7 @@ const Transactions = () => {
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
+                <option value={100}>100</option>
               </select>
             </div>
           </div>
@@ -265,15 +312,7 @@ const Transactions = () => {
           {/* Clear Filters */}
           <div className="mt-4">
             <button
-              onClick={() =>
-                setFilters({
-                  category: "",
-                  startDate: "",
-                  endDate: "",
-                  page: 1,
-                  limit: 10,
-                })
-              }
+              onClick={clearFilters}
               className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
             >
               Clear Filters
@@ -293,6 +332,23 @@ const Transactions = () => {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-600 text-sm">
+                <strong>Error:</strong> {error}
+              </div>
+              <button
+                onClick={fetchTransactions}
+                className="ml-auto px-3 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Transactions List */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {loading ? (
@@ -303,8 +359,12 @@ const Transactions = () => {
           ) : transactions.length === 0 ? (
             <div className="p-8 text-center">
               <div className="text-6xl mb-4">📊</div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">No transactions found</h3>
-              <p className="text-slate-600">Try adjusting your filters or add some transactions.</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                {error ? "Error loading transactions" : "No transactions found"}
+              </h3>
+              <p className="text-slate-600">
+                {error ? "Please try again or check your connection." : "Try adjusting your filters or add some transactions."}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -343,56 +403,33 @@ const Transactions = () => {
         </div>
 
         {/* Pagination */}
-        {pagination.totalPages > 1 && (
+        {!loading && !error && pagination.totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                 disabled={!pagination.hasPrev}
-                className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
 
               <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                  let pageNum
-                  if (pagination.totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (pagination.currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (pagination.currentPage >= pagination.totalPages - 2) {
-                    pageNum = pagination.totalPages - 4 + i
-                  } else {
-                    pageNum = pagination.currentPage - 2 + i
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        pageNum === pagination.currentPage
-                          ? "bg-blue-600 text-white"
-                          : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                })}
+                {renderPaginationButtons()}
               </div>
 
               <button
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
                 disabled={!pagination.hasNext}
-                className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
             </div>
 
-            <div className="text-sm text-slate-600">Total: {pagination.totalCount} transactions</div>
+            <div className="text-sm text-slate-600">
+              Total: {pagination.totalCount} transactions
+            </div>
           </div>
         )}
       </div>
