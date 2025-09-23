@@ -61,6 +61,12 @@ const ProfileDetails = () => {
     setConfirmationModal(false);
   };
 
+  const formatDateForInput = (isoString) => {
+  if (!isoString) return "";
+  return isoString.split('T')[0]; // Converts "2025-09-16T00:00:00.000Z" to "2025-09-16"
+};
+
+
   return (
     <div className="w-full md:w-[85%] overflow-auto">
       {/* Main Content */}
@@ -169,7 +175,7 @@ const ProfileDetails = () => {
                   <input
                     type="date"
                     name="dateOfBirth"
-                    value={profileData?.dateOfBirth || ""}
+                    value={formatDateForInput(profileData?.dateOfBirth) || ""}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
                     className={`w-full px-4 py-3 border border-slate-200 rounded-xl transition-all duration-200 text-slate-700 ${

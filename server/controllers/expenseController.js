@@ -18,7 +18,7 @@ const fetchWithFallback = async (endpoint) => {
       if (!response.ok) throw new Error("Fallback API failed");
       return await response.json();
     } catch (fallbackError) {
-      throw new Error("Both APIs failed", fallbackError);
+      throw new Error(`Both APIs failed: ${fallbackError.message}`);
     }
   }
 };
@@ -36,18 +36,22 @@ const getCurrentPeriodDateRange = (resetCycle) => {
   let startDate;
 
   switch (resetCycle) {
-    case 'weekly':
+    case "weekly":
       // Start from Monday of current week
       const dayOfWeek = now.getDay();
       const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToMonday);
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + daysToMonday
+      );
       startDate.setHours(0, 0, 0, 0);
       break;
-    case 'monthly':
+    case "monthly":
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       startDate.setHours(0, 0, 0, 0);
       break;
-    case 'yearly':
+    case "yearly":
       startDate = new Date(now.getFullYear(), 0, 1);
       startDate.setHours(0, 0, 0, 0);
       break;
@@ -69,17 +73,21 @@ const getDisplayPeriodDateRange = (period) => {
   let startDate;
 
   switch (period) {
-    case 'week':
+    case "week":
       // This week (Monday to Sunday)
       const dayOfWeek = now.getDay();
       const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToMonday);
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + daysToMonday
+      );
       break;
-    case 'month':
+    case "month":
       // This month (1st to last day)
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
-    case 'year':
+    case "year":
       // This year (Jan 1 to Dec 31)
       startDate = new Date(now.getFullYear(), 0, 1);
       break;
@@ -98,23 +106,26 @@ const getDisplayPeriodDateRange = (period) => {
 const calculateExpensesForPeriod = async (userId, period) => {
   try {
     const { startDate, endDate } = getDisplayPeriodDateRange(period);
-    
+
     const expenses = await Expense.find({
       user: userId,
       date: {
         $gte: startDate,
-        $lte: endDate
-      }
+        $lte: endDate,
+      },
     }).lean();
 
-    const total = expenses.reduce((sum, expense) => sum + expense.baseAmount, 0);
-    
+    const total = expenses.reduce(
+      (sum, expense) => sum + expense.baseAmount,
+      0
+    );
+
     return {
       period,
       total,
       count: expenses.length,
       startDate,
-      endDate
+      endDate,
     };
   } catch (error) {
     console.error(`Error calculating ${period} expenses:`, error);
@@ -123,7 +134,7 @@ const calculateExpensesForPeriod = async (userId, period) => {
       total: 0,
       count: 0,
       startDate: null,
-      endDate: null
+      endDate: null,
     };
   }
 };
@@ -132,32 +143,35 @@ const calculateExpensesForPeriod = async (userId, period) => {
 const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
   try {
     const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
-    
+
     const expenses = await Expense.find({
       user: userId,
       date: {
         $gte: startDate,
-        $lte: endDate
-      }
+        $lte: endDate,
+      },
     }).lean();
 
-    const total = expenses.reduce((sum, expense) => sum + expense.baseAmount, 0);
-    
+    const total = expenses.reduce(
+      (sum, expense) => sum + expense.baseAmount,
+      0
+    );
+
     return {
       total,
       count: expenses.length,
       startDate,
       endDate,
-      resetCycle
+      resetCycle,
     };
   } catch (error) {
-    console.error('Error calculating budget period expenses:', error);
+    console.error("Error calculating budget period expenses:", error);
     return {
       total: 0,
       count: 0,
       startDate: null,
       endDate: null,
-      resetCycle
+      resetCycle,
     };
   }
 };
@@ -201,9 +215,9 @@ exports.addExpense = async (req, res) => {
     const preference = await Preference.findOne({ user: id }).select(
       "baseCurrency resetCycle budget notifications"
     );
-    
+
     const baseCurrency = preference?.baseCurrency || currency;
-    const resetCycle = preference?.resetCycle || 'monthly';
+    const resetCycle = preference?.resetCycle || "monthly";
     const budget = preference?.budget || 0;
 
     let baseAmount = amount;
@@ -235,33 +249,64 @@ exports.addExpense = async (req, res) => {
     });
 
     // Calculate current budget period total AFTER adding the expense
-    const budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(id, resetCycle);
+    const budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(
+      id,
+      resetCycle
+    );
     const currentTotal = budgetPeriodData.total;
+    console.log("current total :", currentTotal);
+    console.log("budget:", budget);
+
+    const progress = currentTotal / budget; //0.5, 0.75, etc percentage spent
+    const thresholds = preference.alertThresholds || [1]; // default only 100%
+
+    console.log(thresholds);
+
+    console.log(progress);
+
+    // find the smallest threshold not yet passed
+    const nextThreshold = thresholds.find(
+      (t) => progress >= t && t > (preference.lastAlertThreshold || 0)
+    );
+
+    console.log(nextThreshold);
 
     // Check if budget is exceeded and send email if notifications are enabled
     if (budget > 0 && currentTotal > budget && preference?.notifications) {
-      const frontendUrl =  process.env.FRONTEND_URL || 'http://localhost:5173';
-      
-      try {
-        await emailSender(
-          email,
-          `Budget Exceeded - Your ${resetCycle} limit has been surpassed`,
-          `
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
+      if (nextThreshold) {
+        try {
+          await emailSender(
+            email,
+            `Budget Exceeded - Your ${resetCycle} limit has been surpassed`,
+            `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc3545;">🚨 Budget Alert!</h2>
-            <p>You have set a budget of <strong>${baseCurrency} ${budget.toFixed(2)}</strong> for this ${resetCycle}, but your current expenses total <strong>${baseCurrency} ${currentTotal.toFixed(2)}</strong>.</p>
-            <p>This means you have exceeded your budget by <strong>${baseCurrency} ${(currentTotal - budget).toFixed(2)}</strong>.</p>
-            <p>Latest expense: <strong>${title}</strong> - ${baseCurrency} ${baseAmount.toFixed(2)}</p>
+            <h2 style="color: #dc3545;"> Budget Alert!</h2>
+            <p>You have set a budget of <strong>${baseCurrency} ${budget.toFixed(
+              2
+            )}</strong> for this ${resetCycle}, but your current expenses total <strong>${baseCurrency} ${currentTotal.toFixed(
+              2
+            )}</strong>.</p>
+            <p>This means you have exceeded your budget by <strong>${baseCurrency} ${(
+              currentTotal - budget
+            ).toFixed(2)}</strong>.</p>
+            <p>Latest expense: <strong>${title}</strong> - ${baseCurrency} Number(${baseAmount}).toFixed(2)
+
+            )}</p>
             <hr style="margin: 20px 0;">
             <p><strong>Budget Period:</strong> ${budgetPeriodData.startDate?.toLocaleDateString()} to ${budgetPeriodData.endDate?.toLocaleDateString()}</p>
             <a href="${frontendUrl}/dashboard/budget" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">View Budget Dashboard</a>
           </div>
           `
-        );
-      } catch (emailError) {
-        console.error('Failed to send budget alert email:', emailError);
-        // Don't fail the expense creation if email fails
+          );
+        } catch (emailError) {
+          console.error("Failed to send budget alert email:", emailError);
+          // Don't fail the expense creation if email fails
+        }
       }
+      preference.lastAlertThreshold = nextThreshold;
+      await preference.save();
     }
 
     return res.status(200).json({
@@ -275,8 +320,8 @@ exports.addExpense = async (req, res) => {
         remaining: budget > 0 ? Math.max(0, budget - currentTotal) : null,
         resetCycle,
         periodStart: budgetPeriodData.startDate,
-        periodEnd: budgetPeriodData.endDate
-      }
+        periodEnd: budgetPeriodData.endDate,
+      },
     });
   } catch (error) {
     console.error("Error adding expense:", error);
@@ -298,21 +343,15 @@ exports.getAllExpenses = async (req, res) => {
     }
 
     // Get query parameters for filtering
-    const { 
-      category, 
-      startDate, 
-      endDate,
-      page = 1,
-      limit = 100 
-    } = req.query;
+    const { category, startDate, endDate, page = 1, limit = 100 } = req.query;
 
     // Build filter object
     const filter = { user: userId };
-    
+
     if (category) {
       filter.category = category;
     }
-    
+
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);
@@ -333,15 +372,18 @@ exports.getAllExpenses = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: expenses.length > 0 ? "Fetched transactions successfully" : "No transactions found",
+      message:
+        expenses.length > 0
+          ? "Fetched transactions successfully"
+          : "No transactions found",
       expenses,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalCount / parseInt(limit)),
         totalCount,
         hasNext: skip + expenses.length < totalCount,
-        hasPrev: parseInt(page) > 1
-      }
+        hasPrev: parseInt(page) > 1,
+      },
     });
   } catch (error) {
     console.error("Error getting expenses:", error);
@@ -366,22 +408,25 @@ exports.getExpenseTotals = async (req, res) => {
 
     // Get user preferences
     const preference = await Preference.findOne({ user: userId }).select(
-      'baseCurrency budget resetCycle notifications'
+      "baseCurrency budget resetCycle notifications"
     );
-    
-    const baseCurrency = preference?.baseCurrency || 'INR';
+
+    const baseCurrency = preference?.baseCurrency || "INR";
     const budget = preference?.budget || 0;
-    const resetCycle = preference?.resetCycle || 'monthly';
+    const resetCycle = preference?.resetCycle || "monthly";
 
     // Calculate display totals (these are always week/month/year regardless of reset cycle)
     const [weekTotal, monthTotal, yearTotal] = await Promise.all([
-      calculateExpensesForPeriod(userId, 'week'),
-      calculateExpensesForPeriod(userId, 'month'),
-      calculateExpensesForPeriod(userId, 'year')
+      calculateExpensesForPeriod(userId, "week"),
+      calculateExpensesForPeriod(userId, "month"),
+      calculateExpensesForPeriod(userId, "year"),
     ]);
 
     // Calculate current budget period (based on user's reset cycle)
-    const budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(userId, resetCycle);
+    const budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(
+      userId,
+      resetCycle
+    );
 
     return res.status(200).json({
       success: true,
@@ -390,38 +435,40 @@ exports.getExpenseTotals = async (req, res) => {
         week: {
           total: weekTotal.total,
           count: weekTotal.count,
-          period: 'This Week',
+          period: "This Week",
           startDate: weekTotal.startDate,
-          endDate: weekTotal.endDate
+          endDate: weekTotal.endDate,
         },
         month: {
           total: monthTotal.total,
           count: monthTotal.count,
-          period: 'This Month',
+          period: "This Month",
           startDate: monthTotal.startDate,
-          endDate: monthTotal.endDate
+          endDate: monthTotal.endDate,
         },
         year: {
           total: yearTotal.total,
           count: yearTotal.count,
-          period: 'This Year',
+          period: "This Year",
           startDate: yearTotal.startDate,
-          endDate: yearTotal.endDate
-        }
+          endDate: yearTotal.endDate,
+        },
       },
       budgetInfo: {
         budget: budget,
         resetCycle,
         currentPeriodTotal: budgetPeriodData.total,
         currentPeriodCount: budgetPeriodData.count,
-        remaining: budget > 0 ? Math.max(0, budget - budgetPeriodData.total) : null,
+        remaining:
+          budget > 0 ? Math.max(0, budget - budgetPeriodData.total) : null,
         exceeded: budget > 0 && budgetPeriodData.total > budget,
-        percentageUsed: budget > 0 ? Math.round((budgetPeriodData.total / budget) * 100) : 0,
+        percentageUsed:
+          budget > 0 ? Math.round((budgetPeriodData.total / budget) * 100) : 0,
         periodStart: budgetPeriodData.startDate,
         periodEnd: budgetPeriodData.endDate,
-        periodDescription: `Current ${resetCycle} period`
+        periodDescription: `Current ${resetCycle} period`,
       },
-      currency: baseCurrency
+      currency: baseCurrency,
     });
   } catch (error) {
     console.error("Error getting expense totals:", error);

@@ -13,6 +13,15 @@ const preferenceSchema = mongoose.Schema(
       default: "INR", // could be USD, EUR, etc.
       required: true,
     },
+    alertThresholds: {
+      type: Number,
+      enum: [0.5, 1],
+      default: 0.5,
+    }, // 50%, 100%, budget exceeded emails
+    lastAlertThreshold: {
+      type: Number, // last threshold already triggered
+      default: 0,
+    },
     budget: {
       type: Number,
       default: 0, // user can set a budget

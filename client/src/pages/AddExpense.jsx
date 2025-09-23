@@ -18,7 +18,8 @@ const AddExpense = () => {
     amount: "",
     currency: "INR",
     category: "",
-    date: new Date().toISOString().split("T")[0], // Format for date input
+    // Default today's date in correct format
+    date: new Date().toISOString().split("T")[0],
     paymentMethod: "",
   });
 
@@ -50,13 +51,14 @@ const AddExpense = () => {
       amount: "",
       currency: "INR",
       category: "",
-      date: new Date().toISOString().split("T")[0], // Format for date input
+      // Default today's date in correct format
+      date: new Date().toISOString().split("T")[0],
       paymentMethod: "",
     });
   };
 
   const categories = [
-    "Rent(or Housing maintainence, Utilities, etc.)",
+    "Housing(Rent, maintainence, Utilities, etc.)",
     "Food(Groceries, Dining, etc.)",
     "Transportation",
     "Shopping",

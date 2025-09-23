@@ -14,7 +14,7 @@ const PreferencesSetup = () => {
 
   const [formData, setFormData] = useState({
     baseCurrency: "INR",
-    monthlyBudget: "",
+    budget: "",
     notifications: true,
     resetCycle: "monthly",
   });
@@ -84,22 +84,22 @@ const PreferencesSetup = () => {
               </p>
             </div>
 
-            {/* Monthly Budget */}
+            {/*  Budget */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Monthly Budget
+                 Budget
               </label>
               <input
                 type="number"
-                name="monthlyBudget"
-                value={formData.monthlyBudget}
+                name="budget"
+                value={formData.budget}
                 onChange={handleChange}
-                placeholder="Enter your monthly budget limit"
+                placeholder="Enter your budget limit"
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-700"
               />
               <p className="text-sm text-slate-500 mt-2">
-                Set a monthly spending limit to help track your expenses and
-                receive budget alerts.
+                Set a spending limit to help track your expenses and
+                receive budget alerts accord to your reset cycle.
               </p>
             </div>
 

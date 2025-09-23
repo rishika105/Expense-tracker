@@ -10,10 +10,10 @@ exports.addPreferences = async (req, res) => {
         message: "User not found",
       });
     }
-    const { baseCurrency, monthlyBudget, notifications, resetCycle } = req.body;
+    const { baseCurrency, budget, notifications, resetCycle } = req.body;
 
     const user = User.findById(id);
-    if (!baseCurrency || !monthlyBudget || !notifications || !resetCycle) {
+    if (!baseCurrency || !budget || !notifications || !resetCycle) {
       return res.status(400).json({
         success: false,
         message: "Some fields are missing",
@@ -23,7 +23,7 @@ exports.addPreferences = async (req, res) => {
     const preferences = await Preference.create({
       user: id,
       baseCurrency,
-      monthlyBudget,
+      budget,
       notifications,
       resetCycle,
     });
@@ -89,10 +89,12 @@ exports.updatePreferences = async (req, res) => {
       });
     }
 
-    const { baseCurrency, monthlyBudget, notifications, resetCycle } = req.body;
+    const { baseCurrency, budget, notifications, resetCycle } = req.body;
     const user = User.findById(userId);
 
-    if (!baseCurrency || !monthlyBudget || !notifications || !resetCycle) {
+    // console.log(req.body)
+
+    if (!baseCurrency || !budget || !notifications || !resetCycle) {
       return res.status(400).json({
         success: false,
         message: "Some fields are missing",
@@ -101,7 +103,7 @@ exports.updatePreferences = async (req, res) => {
 
     const updatedPreferences = await Preference.findOneAndUpdate(
       { user: userId }, // ✅ find by userId
-      { baseCurrency, monthlyBudget, notifications, resetCycle },
+      { baseCurrency, budget, notifications, resetCycle },
       { new: true } // upsert creates if not found
     );
 

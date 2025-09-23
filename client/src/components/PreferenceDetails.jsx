@@ -13,7 +13,7 @@ const PreferenceDetails = () => {
   const [currencies, setCurrencies] = useState([]);
   const [preferencesData, setPreferencesData] = useState({
     baseCurrency: "INR",
-    monthlyBudget: "",
+    budget: 0,
     notifications: true,
     resetCycle: "monthly",
   });
@@ -67,6 +67,7 @@ const PreferenceDetails = () => {
 
   const handleUpdatePreferences = async (e) => {
     e.preventDefault();
+    console.log(preferencesData)
     await dispatch(updatePreference(preferencesData, token));
     setIsEditingPref(false);
   };
@@ -119,8 +120,8 @@ const PreferenceDetails = () => {
             </label>
             <input
               type="number"
-              name="monthlyBudget"
-              value={preferencesData?.monthlyBudget || ""}
+              name="budget"
+              value={preferencesData?.budget || ""}
               onChange={handlePreferenceChange}
               disabled={!isEditingPref}
               className={`w-full px-4 py-3 border border-slate-200 rounded-xl transition-all duration-200 text-slate-700 ${
