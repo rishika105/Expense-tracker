@@ -148,11 +148,25 @@ const updateCachedBudgetTotal = async (userId, resetCycle, newExpenseAmount) => 
     const cachedData = await getCachedBudgetTotal(userId, resetCycle);
     
     if (cachedData) {
+      // Validate cached data before updating
+      if (typeof cachedData.total !== 'number' || typeof cachedData.count !== 'number') {
+        console.warn('Invalid cached data detected, invalidating cache');
+        await invalidateBudgetCache(userId, resetCycle);
+        return null;
+      }
+      
       const updatedData = {
         ...cachedData,
-        total: cachedData.total + newExpenseAmount,
+        total: Number((cachedData.total + newExpenseAmount).toFixed(2)),
         count: cachedData.count + 1,
       };
+      
+      console.log('Cache update:', {
+        previous: cachedData.total,
+        added: newExpenseAmount,
+        new: updatedData.total
+      });
+      
       await setCachedBudgetTotal(userId, resetCycle, updatedData);
       return updatedData;
     }
@@ -277,13 +291,25 @@ const checkAndSendThresholdAlerts = async (
   }
 
   const progress = currentTotal / budget;
-  const thresholds = preference.alertThresholds || [0.5, 1.0]; // Default: 50% and 100%
+  
+  // Ensure thresholds is always an array
+  let thresholds = preference.alertThresholds;
+  
+  // Handle various data types that might come from DB
+  if (!thresholds || !Array.isArray(thresholds)) {
+    thresholds = [0.5, 1.0]; // Default: 50% and 100%
+  } else if (thresholds.length === 0) {
+    thresholds = [0.5, 1.0];
+  }
+  
   const lastAlertThreshold = preference.lastAlertThreshold || 0;
 
   console.log("Budget alert check:", {
     progress: (progress * 100).toFixed(1) + "%",
     thresholds,
-    lastAlertThreshold
+    lastAlertThreshold,
+    currentTotal,
+    budget
   });
 
   // Find all thresholds that have been crossed but not yet alerted
@@ -472,7 +498,26 @@ exports.addExpense = async (req, res) => {
           message: `Conversion rate from ${currency} to ${baseCurrency} not available`,
         });
       }
-      baseAmount = amount * rates[baseCurrency.toLowerCase()];
+      const conversionRate = rates[baseCurrency.toLowerCase()];
+      baseAmount = amount * conversionRate;
+      
+      console.log(`Currency conversion: ${amount} ${currency} -> ${baseAmount} ${baseCurrency} (rate: ${conversionRate})`);
+    }
+
+    // Validate baseAmount to prevent absurd values
+    if (isNaN(baseAmount) || !isFinite(baseAmount) || baseAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid expense amount after conversion",
+      });
+    }
+
+    // Sanity check: if base amount is unreasonably large, reject it
+    if (baseAmount > 100000000) { // 100 million
+      return res.status(400).json({
+        success: false,
+        message: "Expense amount is too large. Please check your values.",
+      });
     }
 
     // Create expense
@@ -494,26 +539,37 @@ exports.addExpense = async (req, res) => {
     
     // If cache update failed, recalculate (fallback)
     if (!budgetPeriodData) {
+      console.log('Cache update failed or not available, recalculating from database...');
       budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(id, resetCycle);
     }
 
     const currentTotal = budgetPeriodData.total;
 
-    console.log("Current total (optimized):", currentTotal);
-    console.log("Budget:", budget);
-
-    // **IMPROVED THRESHOLD ALERT SYSTEM**
-    await checkAndSendThresholdAlerts(
-      id,
-      email,
+    console.log("Budget status:", {
       currentTotal,
       budget,
       resetCycle,
-      baseCurrency,
-      expense,
-      budgetPeriodData,
-      preference
-    );
+      expenseAdded: baseAmount,
+      currency: baseCurrency
+    });
+
+    // **IMPROVED THRESHOLD ALERT SYSTEM**
+    try {
+      await checkAndSendThresholdAlerts(
+        id,
+        email,
+        currentTotal,
+        budget,
+        resetCycle,
+        baseCurrency,
+        expense,
+        budgetPeriodData,
+        preference
+      );
+    } catch (alertError) {
+      // Don't fail expense creation if alerts fail
+      console.error("Error sending threshold alerts:", alertError);
+    }
 
     return res.status(200).json({
       success: true,
