@@ -1,40 +1,40 @@
-const express = require("express");
+import express from "express";
 const app = express();
-const cors = require("cors");
-const dotenv = require("dotenv");
-const database = require("./config/database");
-const userRoutes = require("./routes/userRoutes");
-const preferenceRoutes = require("./routes/preferenceRoutes");
-const expenseRoutes = require("./routes/expenseRoutes");
-const PORT = process.env.PORT || 5000;
+import cors from "cors";
+import userRoutes from "./routes/userRoutes.js";
+import preferenceRoutes from "./routes/preferenceRoutes.js";
+import expenseRoutes from "./routes/expenseRoutes.js";
+// import { emailWorker } from "./utils/emailWorker.js"; // This starts the worker
+import "dotenv/config";
+import { dbconnect } from "./config/database.js";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
+import {emailQueue} from "./utils/emailQueue.js";
 
-dotenv.config();
+const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors()); //allow all
 
-database.connect();
+dbconnect();
 
 // Optional: Add queue monitoring endpoint (only for development/admin)
-if (process.env.NODE_ENV !== 'production') {
-  const { createBullBoard } = require('@bull-board/api');
-  const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
-  const { ExpressAdapter } = require('@bull-board/express');
-  const emailQueue = require('./utils/emailQueue');
-
+if (process.env.NODE_ENV !== "production") {
   const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/admin/queues');
+  serverAdapter.setBasePath("/admin/queues");
 
   const { addQueue } = createBullBoard({
     queues: [new BullMQAdapter(emailQueue)],
     serverAdapter: serverAdapter,
   });
 
-  app.use('/admin/queues', serverAdapter.getRouter());
-  console.log('Queue monitoring available at: http://localhost:5000/admin/queues');
+  app.use("/admin/queues", serverAdapter.getRouter());
+  console.log(
+    "Queue monitoring available at: http://localhost:5000/admin/queues"
+  );
 }
-
 
 app.use("/api/v1", userRoutes);
 app.use("/api/v1/preference", preferenceRoutes);

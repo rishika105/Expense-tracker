@@ -1,3 +1,6 @@
+const { Worker } = require("bullmq");
+const { connection } = require("./emailQueue");
+
 const emailWorker = new Worker(
   "email-queue",
   async (job) => {

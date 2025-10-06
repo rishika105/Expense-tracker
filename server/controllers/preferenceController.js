@@ -1,7 +1,7 @@
-const Preference = require("../models/Preference");
-const User = require("../models/User");
+import Preference from "../models/Preference.js";
+import User from "../models/User.js";
 
-exports.addPreferences = async (req, res) => {
+export const addPreferences = async (req, res) => {
   try {
     const id = req.user.id;
     if (!id) {
@@ -46,7 +46,7 @@ exports.addPreferences = async (req, res) => {
   }
 };
 
-exports.getPreferences = async (req, res) => {
+export const getPreferences = async (req, res) => {
   try {
     const userId = req.user.id;
     if (!userId) {
@@ -79,7 +79,7 @@ exports.getPreferences = async (req, res) => {
   }
 };
 
-exports.updatePreferences = async (req, res) => {
+export const updatePreferences = async (req, res) => {
   try {
     const userId = req.user.id;
     if (!userId) {

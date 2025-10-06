@@ -1,13 +1,11 @@
-const User = require("../models/User");
-const jwt = require("jsonwebtoken");
-const otpGenerator = require("otp-generator");
-const emailSender = require("../utils/emailSender");
-const bcrypt = require("bcrypt");
-const Preference = require("../models/Preference");
-require("dotenv").config();
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
+import otpGenerator from "otp-generator";
+import emailSender from "../utils/emailSender.js";
+import bcrypt from "bcrypt";
 
 // OTP Based Authentication
-exports.sendOtp = async (req, res) => {
+export const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -66,7 +64,7 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
-exports.verifyOtp = async (req, res) => {
+export const verifyOtp = async (req, res) => {
   try {
     //verify if the otp is valid and present
     const { email, otp } = req.body;
@@ -141,7 +139,7 @@ exports.verifyOtp = async (req, res) => {
 };
 
 //we already have null fields for db model just update it even on filling first time
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id; //from middle ware
     if (!userId) {
@@ -179,7 +177,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-exports.getUserDetails = async (req, res) => {
+export const getUserDetails = async (req, res) => {
   try {
     const email = req.user.email; //from middle ware
     if (!email) {
@@ -212,7 +210,7 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
-exports.deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id; //from middle ware
     if (!userId) {

@@ -1,7 +1,7 @@
-const { default: Expense } = require("../models/Expense");
-const Preference = require("../models/Preference");
-const emailQueue = require("../utils/emailQueue");
-const Redis = require("ioredis");
+import Expense  from "../models/Expense.js";
+import Preference from "../models/Preference.js";
+import {emailQueue} from "../utils/emailQueue.js";
+import Redis from "ioredis";
 
 // Redis connection for caching
 const redis = new Redis(process.env.VALKEY_URL || "redis://localhost:6379");
@@ -106,7 +106,7 @@ const getDisplayPeriodDateRange = (period) => {
 // Generate cache key for budget totals
 const getBudgetCacheKey = (userId, resetCycle) => {
   const { startDate } = getCurrentPeriodDateRange(resetCycle);
-  const periodKey = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  const periodKey = startDate.toISOString().split("T")[0]; // YYYY-MM-DD
   return `budget:${userId}:${resetCycle}:${periodKey}`;
 };
 
@@ -115,7 +115,7 @@ const getCachedBudgetTotal = async (userId, resetCycle) => {
   try {
     const cacheKey = getBudgetCacheKey(userId, resetCycle);
     const cachedData = await redis.get(cacheKey);
-    
+
     if (cachedData) {
       return JSON.parse(cachedData);
     }
@@ -131,42 +131,56 @@ const setCachedBudgetTotal = async (userId, resetCycle, data) => {
   try {
     const cacheKey = getBudgetCacheKey(userId, resetCycle);
     const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
-    
+
     // Calculate TTL - cache until end of current period + 1 day
-    const ttlMs = endDate.getTime() - Date.now() + (24 * 60 * 60 * 1000);
+    const ttlMs = endDate.getTime() - Date.now() + 24 * 60 * 60 * 1000;
     const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000)); // Minimum 1 minute
-    
+
     await redis.setex(cacheKey, ttlSeconds, JSON.stringify(data));
+    console.log(
+      "✅ Cached budget set:",
+      cacheKey,
+      "TTL:",
+      ttlSeconds,
+      "seconds"
+    );
   } catch (error) {
     console.error("Error setting cached budget total:", error);
   }
 };
 
 // Update cached budget total incrementally
-const updateCachedBudgetTotal = async (userId, resetCycle, newExpenseAmount) => {
+const updateCachedBudgetTotal = async (
+  userId,
+  resetCycle,
+  newExpenseAmount
+) => {
   try {
     const cachedData = await getCachedBudgetTotal(userId, resetCycle);
-    
+
     if (cachedData) {
       // Validate cached data before updating
-      if (typeof cachedData.total !== 'number' || typeof cachedData.count !== 'number') {
-        console.warn('Invalid cached data detected, invalidating cache');
+      if (
+        typeof cachedData.total !== "number" ||
+        typeof cachedData.count !== "number"
+      ) {
+        console.warn("Invalid cached data detected, invalidating cache");
         await invalidateBudgetCache(userId, resetCycle);
         return null;
       }
-      
+
       const updatedData = {
         ...cachedData,
-        total: Number((cachedData.total + newExpenseAmount).toFixed(2)),
+        total: Number((cachedData.total + Number(newExpenseAmount)).toFixed(2)),
         count: cachedData.count + 1,
       };
-      
-      console.log('Cache update:', {
+
+      console.log("Cache update:", {
         previous: cachedData.total,
         added: newExpenseAmount,
-        new: updatedData.total
+        new: updatedData.total,
       });
-      
+
       await setCachedBudgetTotal(userId, resetCycle, updatedData);
       return updatedData;
     }
@@ -194,7 +208,11 @@ const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
     const cachedData = await getCachedBudgetTotal(userId, resetCycle);
     if (cachedData) {
       console.log("Using cached budget total");
-      return cachedData;
+      return {
+        ...cachedData,
+        startDate: new Date(cachedData.startDate),
+        endDate: new Date(cachedData.endDate),
+      };
     }
 
     console.log("Cache miss - calculating from database");
@@ -223,7 +241,7 @@ const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
 
     // Cache the result
     await setCachedBudgetTotal(userId, resetCycle, data);
-    
+
     return data;
   } catch (error) {
     console.error("Error calculating budget period expenses:", error);
@@ -276,11 +294,11 @@ const calculateExpensesForPeriod = async (userId, period) => {
 
 // **THRESHOLD ALERT SYSTEM**
 const checkAndSendThresholdAlerts = async (
-  userId, 
-  email, 
-  currentTotal, 
-  budget, 
-  resetCycle, 
+  userId,
+  email,
+  currentTotal,
+  budget,
+  resetCycle,
   baseCurrency,
   latestExpense,
   budgetPeriodData,
@@ -291,17 +309,17 @@ const checkAndSendThresholdAlerts = async (
   }
 
   const progress = currentTotal / budget;
-  
+
   // Ensure thresholds is always an array
   let thresholds = preference.alertThresholds;
-  
+
   // Handle various data types that might come from DB
   if (!thresholds || !Array.isArray(thresholds)) {
     thresholds = [0.5, 1.0]; // Default: 50% and 100%
   } else if (thresholds.length === 0) {
     thresholds = [0.5, 1.0];
   }
-  
+
   const lastAlertThreshold = preference.lastAlertThreshold || 0;
 
   console.log("Budget alert check:", {
@@ -309,13 +327,15 @@ const checkAndSendThresholdAlerts = async (
     thresholds,
     lastAlertThreshold,
     currentTotal,
-    budget
+    budget,
   });
 
   // Find all thresholds that have been crossed but not yet alerted
-  const crossedThresholds = thresholds.filter(
-    threshold => progress >= threshold && threshold > lastAlertThreshold
-  ).sort((a, b) => a - b); // Sort ascending to send alerts in order
+  const crossedThresholds = thresholds
+    .filter(
+      (threshold) => progress >= threshold && threshold > lastAlertThreshold
+    )
+    .sort((a, b) => a - b); // Sort ascending to send alerts in order
 
   if (crossedThresholds.length === 0) {
     return;
@@ -325,52 +345,80 @@ const checkAndSendThresholdAlerts = async (
   for (const threshold of crossedThresholds) {
     const isOverBudget = threshold >= 1.0;
     const percentageText = (threshold * 100).toFixed(0);
-    
-    const subject = isOverBudget 
+
+    const subject = isOverBudget
       ? `🚨 Budget Exceeded - ${percentageText}% of your ${resetCycle} limit surpassed`
       : `⚠️ Budget Alert - ${percentageText}% of your ${resetCycle} budget reached`;
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    
+
     const emailBody = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px; border-radius: 8px;">
       <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: ${isOverBudget ? '#dc3545' : '#fd7e14'}; margin: 0; font-size: 28px;">
-            ${isOverBudget ? '🚨' : '⚠️'} Budget ${isOverBudget ? 'Exceeded' : 'Alert'}!
+          <h1 style="color: ${
+            isOverBudget ? "#dc3545" : "#fd7e14"
+          }; margin: 0; font-size: 28px;">
+            ${isOverBudget ? "🚨" : "⚠️"} Budget ${
+      isOverBudget ? "Exceeded" : "Alert"
+    }!
           </h1>
         </div>
         
-        <div style="background: ${isOverBudget ? '#f8d7da' : '#fff3cd'}; border: 1px solid ${isOverBudget ? '#f5c2c7' : '#ffeaa7'}; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="margin: 0 0 15px 0; color: ${isOverBudget ? '#721c24' : '#664d03'};">
-            ${isOverBudget ? 'You have exceeded your budget!' : `You've reached ${percentageText}% of your budget`}
+        <div style="background: ${
+          isOverBudget ? "#f8d7da" : "#fff3cd"
+        }; border: 1px solid ${
+      isOverBudget ? "#f5c2c7" : "#ffeaa7"
+    }; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="margin: 0 0 15px 0; color: ${
+            isOverBudget ? "#721c24" : "#664d03"
+          };">
+            ${
+              isOverBudget
+                ? "You have exceeded your budget!"
+                : `You've reached ${percentageText}% of your budget`
+            }
           </h3>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
             <div>
               <strong>Budget:</strong><br>
-              <span style="font-size: 16px; color: #28a745;">${baseCurrency} ${budget.toFixed(2)}</span>
+              <span style="font-size: 16px; color: #28a745;">${baseCurrency} ${budget.toFixed(
+      2
+    )}</span>
             </div>
             <div>
               <strong>Current Expenses:</strong><br>
-              <span style="font-size: 16px; color: ${isOverBudget ? '#dc3545' : '#fd7e14'};">${baseCurrency} ${currentTotal.toFixed(2)}</span>
+              <span style="font-size: 16px; color: ${
+                isOverBudget ? "#dc3545" : "#fd7e14"
+              };">${baseCurrency} ${currentTotal.toFixed(2)}</span>
             </div>
           </div>
-          ${isOverBudget ? `
+          ${
+            isOverBudget
+              ? `
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #f5c2c7;">
-              <strong style="color: #721c24;">Over budget by: ${baseCurrency} ${(currentTotal - budget).toFixed(2)}</strong>
+              <strong style="color: #721c24;">Over budget by: ${baseCurrency} ${(
+                  currentTotal - budget
+                ).toFixed(2)}</strong>
             </div>
-          ` : `
+          `
+              : `
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ffeaa7;">
-              <strong style="color: #664d03;">Remaining: ${baseCurrency} ${(budget - currentTotal).toFixed(2)}</strong>
+              <strong style="color: #664d03;">Remaining: ${baseCurrency} ${(
+                  budget - currentTotal
+                ).toFixed(2)}</strong>
             </div>
-          `}
+          `
+          }
         </div>
 
         <div style="background: #e9ecef; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
           <h4 style="margin: 0 0 15px 0; color: #495057;">Latest Expense</h4>
           <div style="font-size: 14px; line-height: 1.6;">
             <strong>${latestExpense.title}</strong><br>
-            <span style="color: #6c757d;">${latestExpense.description || 'No description'}</span><br>
+            <span style="color: #6c757d;">${
+              latestExpense.description || "No description"
+            }</span><br>
             <span style="font-size: 16px; color: #dc3545; font-weight: bold;">
               -${baseCurrency} ${latestExpense.baseAmount.toFixed(2)}
             </span>
@@ -382,9 +430,13 @@ const checkAndSendThresholdAlerts = async (
 
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; margin-bottom: 25px; font-size: 14px;">
           <strong>Budget Period:</strong> 
-          ${budgetPeriodData.startDate?.toLocaleDateString()} - ${budgetPeriodData.endDate?.toLocaleDateString()}
+${new Date(budgetPeriodData.startDate).toLocaleDateString()} - ${new Date(
+      budgetPeriodData.endDate
+    ).toLocaleDateString()}
           <br>
-          <strong>Reset Cycle:</strong> ${resetCycle.charAt(0).toUpperCase() + resetCycle.slice(1)}
+          <strong>Reset Cycle:</strong> ${
+            resetCycle.charAt(0).toUpperCase() + resetCycle.slice(1)
+          }
         </div>
 
         <div style="text-align: center;">
@@ -413,27 +465,34 @@ const checkAndSendThresholdAlerts = async (
 
     // Add email to queue instead of sending immediately
     try {
-      await emailQueue.add('budget-alert', {
-        email,
-        subject,
-        body: emailBody,
-        userId,
-        threshold,
-        currentTotal,
-        budget,
-        resetCycle
-      }, {
-        priority: isOverBudget ? 1 : 5, // Higher priority for over-budget alerts
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
+      await emailQueue.add(
+        "budget-alert",
+        {
+          email,
+          subject,
+          body: emailBody,
+          userId,
+          threshold,
+          currentTotal,
+          budget,
+          resetCycle,
         },
-      });
+        {
+          priority: isOverBudget ? 1 : 5, // Higher priority for over-budget alerts
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 2000,
+          },
+        }
+      );
 
       console.log(`Queued budget alert email for ${percentageText}% threshold`);
     } catch (emailError) {
-      console.error(`Failed to queue budget alert email for ${percentageText}% threshold:`, emailError);
+      console.error(
+        `Failed to queue budget alert email for ${percentageText}% threshold:`,
+        emailError
+      );
     }
   }
 
@@ -443,7 +502,7 @@ const checkAndSendThresholdAlerts = async (
   await preference.save();
 };
 
-exports.addExpense = async (req, res) => {
+export const addExpense = async (req, res) => {
   try {
     const id = req.user.id;
     const email = req.user.email;
@@ -500,8 +559,10 @@ exports.addExpense = async (req, res) => {
       }
       const conversionRate = rates[baseCurrency.toLowerCase()];
       baseAmount = amount * conversionRate;
-      
-      console.log(`Currency conversion: ${amount} ${currency} -> ${baseAmount} ${baseCurrency} (rate: ${conversionRate})`);
+
+      console.log(
+        `Currency conversion: ${amount} ${currency} -> ${baseAmount} ${baseCurrency} (rate: ${conversionRate})`
+      );
     }
 
     // Validate baseAmount to prevent absurd values
@@ -513,7 +574,8 @@ exports.addExpense = async (req, res) => {
     }
 
     // Sanity check: if base amount is unreasonably large, reject it
-    if (baseAmount > 100000000) { // 100 million
+    if (baseAmount > 100000000) {
+      // 100 million
       return res.status(400).json({
         success: false,
         message: "Expense amount is too large. Please check your values.",
@@ -534,15 +596,32 @@ exports.addExpense = async (req, res) => {
       user: id,
     });
 
-    // **PERFORMANCE OPTIMIZATION: Update cache incrementally**
-    let budgetPeriodData = await updateCachedBudgetTotal(id, resetCycle, baseAmount);
-    
-    // If cache update failed, recalculate (fallback)
-    if (!budgetPeriodData) {
-      console.log('Cache update failed or not available, recalculating from database...');
-      budgetPeriodData = await calculateCurrentBudgetPeriodExpenses(id, resetCycle);
-    }
+    //waiting for update in db and not immediately caching it says 0
 
+    // **PERFORMANCE OPTIMIZATION: Update cache incrementally**
+    let budgetPeriodData = await updateCachedBudgetTotal(
+      id,
+      resetCycle,
+      baseAmount
+    );
+
+    // If no cache exists, initialize it with THIS expense
+    if (!budgetPeriodData) {
+      console.log("No cache - initializing with current expense");
+
+      const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
+
+      budgetPeriodData = {
+        total: baseAmount, // Just use the current expense amount
+        count: 1,
+        startDate,
+        endDate,
+        resetCycle,
+      };
+
+      // Cache it for next time
+      await setCachedBudgetTotal(id, resetCycle, budgetPeriodData);
+    }
     const currentTotal = budgetPeriodData.total;
 
     console.log("Budget status:", {
@@ -550,7 +629,7 @@ exports.addExpense = async (req, res) => {
       budget,
       resetCycle,
       expenseAdded: baseAmount,
-      currency: baseCurrency
+      currency: baseCurrency,
     });
 
     // **IMPROVED THRESHOLD ALERT SYSTEM**
@@ -594,7 +673,7 @@ exports.addExpense = async (req, res) => {
   }
 };
 
-exports.getAllExpenses = async (req, res) => {
+export const getAllExpenses = async (req, res) => {
   try {
     const userId = req.user.id;
     if (!userId) {
@@ -657,7 +736,7 @@ exports.getAllExpenses = async (req, res) => {
 };
 
 // Get expense totals for week, month, year + current budget status
-exports.getExpenseTotals = async (req, res) => {
+export const getExpenseTotals = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -742,6 +821,6 @@ exports.getExpenseTotals = async (req, res) => {
 };
 
 // Utility function to invalidate cache when expenses are modified/deleted
-exports.invalidateUserBudgetCache = async (userId, resetCycle) => {
+export const invalidateUserBudgetCache = async (userId, resetCycle) => {
   await invalidateBudgetCache(userId, resetCycle);
 };

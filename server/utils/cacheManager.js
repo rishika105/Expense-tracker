@@ -1,5 +1,5 @@
 
-const Redis = require("ioredis");
+import Redis from "ioredis";
 
 class CacheManager {
   constructor() {
@@ -184,4 +184,4 @@ class CacheManager {
   }
 }
 
-module.exports = new CacheManager();
+export default new CacheManager();

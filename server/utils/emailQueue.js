@@ -1,14 +1,14 @@
-const { Queue } = require("bullmq");
-const Redis = require("ioredis");
+import { Queue } from "bullmq";
+import Redis from "ioredis";
 
-const connection = new Redis(process.env.VALKEY_URL || "redis://localhost:6379", {
-  maxRetriesPerRequest: 3,
+export const connection = new Redis(process.env.VALKEY_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
   retryDelayOnFailover: 100,
   connectTimeout: 60000,
   commandTimeout: 5000,
 });
 
-const emailQueue = new Queue("email-queue", { 
+export const emailQueue = new Queue("email-queue", { 
   connection,
   defaultJobOptions: {
     removeOnComplete: 100, // Keep last 100 completed jobs
@@ -33,7 +33,4 @@ emailQueue.on('failed', (job, err) => {
 emailQueue.on('stalled', (job) => {
   console.warn(`Email job ${job.id} stalled`);
 });
-
-module.exports = emailQueue;
-
 
