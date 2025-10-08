@@ -1,14 +1,14 @@
-import express from "express";
-import {
+const express = require("express");
+const {
   updatePreferences,
   addPreferences,
   getPreferences,
-} from "../controllers/preferenceController.js";
-import {auth}  from "../middlewares/auth.js";
+} = require("../controllers/preferenceController");
+const { auth } = require("../middlewares/auth");
 const router = express.Router();
 
 router.post("/create", auth, addPreferences);
 router.put("/update", auth, updatePreferences);
 router.get("/", auth, getPreferences);
 
-export default router;
+module.exports = router;

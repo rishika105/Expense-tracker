@@ -1,38 +1,11 @@
-import Expense  from "../models/Expense.js";
-import Preference from "../models/Preference.js";
-import {emailQueue} from "../utils/emailQueue.js";
-import Redis from "ioredis";
+const { default: Expense } = require("../models/Expense");
+const Preference = require("../models/Preference");
+const emailQueue = require("../email/emailQueue");
+const Redis = require("ioredis");
+const { fetchExchangeRates } = require("../utils/fetchExchangeRate");
 
 // Redis connection for caching
 const redis = new Redis(process.env.VALKEY_URL || "redis://localhost:6379");
-
-const primaryApiBase =
-  "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1";
-const fallbackApiBase = "https://latest.currency-api.pages.dev/v1";
-
-const fetchWithFallback = async (endpoint) => {
-  try {
-    const response = await fetch(`${primaryApiBase}${endpoint}`);
-    if (!response.ok) throw new Error("Primary API failed");
-    return await response.json();
-  } catch (error) {
-    console.log("Primary API failed, trying fallback...", error);
-    try {
-      const response = await fetch(`${fallbackApiBase}${endpoint}`);
-      if (!response.ok) throw new Error("Fallback API failed");
-      return await response.json();
-    } catch (fallbackError) {
-      throw new Error(`Both APIs failed: ${fallbackError.message}`);
-    }
-  }
-};
-
-const fetchExchangeRates = async (baseCurrency) => {
-  const data = await fetchWithFallback(
-    `/currencies/${baseCurrency.toLowerCase()}.json`
-  );
-  return data[baseCurrency.toLowerCase()] || {};
-};
 
 // Helper function to get date range for current period based on reset cycle
 const getCurrentPeriodDateRange = (resetCycle) => {
@@ -137,13 +110,6 @@ const setCachedBudgetTotal = async (userId, resetCycle, data) => {
     const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000)); // Minimum 1 minute
 
     await redis.setex(cacheKey, ttlSeconds, JSON.stringify(data));
-    console.log(
-      "✅ Cached budget set:",
-      cacheKey,
-      "TTL:",
-      ttlSeconds,
-      "seconds"
-    );
   } catch (error) {
     console.error("Error setting cached budget total:", error);
   }
@@ -171,7 +137,7 @@ const updateCachedBudgetTotal = async (
 
       const updatedData = {
         ...cachedData,
-        total: Number((cachedData.total + Number(newExpenseAmount)).toFixed(2)),
+        total: Number((cachedData.total + Number(newExpenseAmount)).toFixed(2)), //all converted to num
         count: cachedData.count + 1,
       };
 
@@ -430,9 +396,8 @@ const checkAndSendThresholdAlerts = async (
 
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; margin-bottom: 25px; font-size: 14px;">
           <strong>Budget Period:</strong> 
-${new Date(budgetPeriodData.startDate).toLocaleDateString()} - ${new Date(
-      budgetPeriodData.endDate
-    ).toLocaleDateString()}
+       ${new Date(budgetPeriodData.startDate).toLocaleDateString()}
+${new Date(budgetPeriodData.endDate).toLocaleDateString()}
           <br>
           <strong>Reset Cycle:</strong> ${
             resetCycle.charAt(0).toUpperCase() + resetCycle.slice(1)
@@ -502,7 +467,7 @@ ${new Date(budgetPeriodData.startDate).toLocaleDateString()} - ${new Date(
   await preference.save();
 };
 
-export const addExpense = async (req, res) => {
+exports.addExpense = async (req, res) => {
   try {
     const id = req.user.id;
     const email = req.user.email;
@@ -596,9 +561,6 @@ export const addExpense = async (req, res) => {
       user: id,
     });
 
-    //waiting for update in db and not immediately caching it says 0
-
-    // **PERFORMANCE OPTIMIZATION: Update cache incrementally**
     let budgetPeriodData = await updateCachedBudgetTotal(
       id,
       resetCycle,
@@ -606,6 +568,7 @@ export const addExpense = async (req, res) => {
     );
 
     // If no cache exists, initialize it with THIS expense
+    //first expense of the cycle**********************************
     if (!budgetPeriodData) {
       console.log("No cache - initializing with current expense");
 
@@ -622,6 +585,7 @@ export const addExpense = async (req, res) => {
       // Cache it for next time
       await setCachedBudgetTotal(id, resetCycle, budgetPeriodData);
     }
+
     const currentTotal = budgetPeriodData.total;
 
     console.log("Budget status:", {
@@ -673,7 +637,7 @@ export const addExpense = async (req, res) => {
   }
 };
 
-export const getAllExpenses = async (req, res) => {
+exports.getAllExpenses = async (req, res) => {
   try {
     const userId = req.user.id;
     if (!userId) {
@@ -736,7 +700,7 @@ export const getAllExpenses = async (req, res) => {
 };
 
 // Get expense totals for week, month, year + current budget status
-export const getExpenseTotals = async (req, res) => {
+exports.getExpenseTotals = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -821,6 +785,6 @@ export const getExpenseTotals = async (req, res) => {
 };
 
 // Utility function to invalidate cache when expenses are modified/deleted
-export const invalidateUserBudgetCache = async (userId, resetCycle) => {
+exports.invalidateUserBudgetCache = async (userId, resetCycle) => {
   await invalidateBudgetCache(userId, resetCycle);
 };

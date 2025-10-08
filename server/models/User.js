@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-import Preference from "./Preference.js";
-import Expense  from "./Expense.js";
+const mongoose = require("mongoose");
+const Preference = require("./Preference");
+const { default: Expense } = require("./Expense");
 
 const userSchema = mongoose.Schema({
   email: {
@@ -21,7 +21,7 @@ const userSchema = mongoose.Schema({
   // Profile details
   fullName: {
     type: String,
-    trim: true, //idhar required true nhi coz hum pehle null bharenge while verification baad mai update krenge
+    trim: true,  //idhar required true nhi coz hum pehle null bharenge while verification baad mai update krenge
   },
   userName: {
     type: String,
@@ -49,4 +49,5 @@ userSchema.pre("findByIdAndDelete", async function (next) {
   return next();
 });
 
-export default mongoose.model("User", userSchema);
+
+module.exports = mongoose.model("User", userSchema);

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const preferenceSchema = mongoose.Schema(
   {
@@ -42,4 +42,4 @@ const preferenceSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Preference", preferenceSchema);
+module.exports = mongoose.model("Preference", preferenceSchema);

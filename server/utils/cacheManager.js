@@ -1,5 +1,4 @@
-
-import Redis from "ioredis";
+const Redis = require("ioredis");
 
 class CacheManager {
   constructor() {
@@ -12,7 +11,7 @@ class CacheManager {
       const data = await this.redis.get(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      console.error("Cache get error:", error);
       return null;
     }
   }
@@ -22,7 +21,7 @@ class CacheManager {
       await this.redis.setex(key, ttlSeconds, JSON.stringify(data));
       return true;
     } catch (error) {
-      console.error('Cache set error:', error);
+      console.error("Cache set error:", error);
       return false;
     }
   }
@@ -32,7 +31,7 @@ class CacheManager {
       await this.redis.del(key);
       return true;
     } catch (error) {
-      console.error('Cache del error:', error);
+      console.error("Cache del error:", error);
       return false;
     }
   }
@@ -45,7 +44,7 @@ class CacheManager {
       }
       return keys.length;
     } catch (error) {
-      console.error('Cache invalidate pattern error:', error);
+      console.error("Cache invalidate pattern error:", error);
       return 0;
     }
   }
@@ -54,12 +53,16 @@ class CacheManager {
   async getBudgetCache(userId, resetCycle) {
     const now = new Date();
     let startDate;
-    
+
     switch (resetCycle) {
       case "weekly":
         const dayOfWeek = now.getDay();
         const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToMonday);
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() + daysToMonday
+        );
         break;
       case "monthly":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -70,22 +73,26 @@ class CacheManager {
       default:
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
-    
-    const periodKey = startDate.toISOString().split('T')[0];
+
+    const periodKey = startDate.toISOString().split("T")[0];
     const cacheKey = `budget:${userId}:${resetCycle}:${periodKey}`;
-    
+
     return await this.get(cacheKey);
   }
 
   async setBudgetCache(userId, resetCycle, data) {
     const now = new Date();
     let endDate;
-    
+
     switch (resetCycle) {
       case "weekly":
         const dayOfWeek = now.getDay();
         const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToSunday);
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() + daysToSunday
+        );
         endDate.setHours(23, 59, 59, 999);
         break;
       case "monthly":
@@ -100,18 +107,22 @@ class CacheManager {
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endDate.setHours(23, 59, 59, 999);
     }
-    
-    const ttlMs = endDate.getTime() - Date.now() + (24 * 60 * 60 * 1000); // Add 1 day buffer
+
+    const ttlMs = endDate.getTime() - Date.now() + 24 * 60 * 60 * 1000; // Add 1 day buffer
     const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000));
-    
+
     const now2 = new Date();
     let startDate;
-    
+
     switch (resetCycle) {
       case "weekly":
         const dayOfWeek2 = now2.getDay();
         const daysToMonday = dayOfWeek2 === 0 ? -6 : 1 - dayOfWeek2;
-        startDate = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate() + daysToMonday);
+        startDate = new Date(
+          now2.getFullYear(),
+          now2.getMonth(),
+          now2.getDate() + daysToMonday
+        );
         break;
       case "monthly":
         startDate = new Date(now2.getFullYear(), now2.getMonth(), 1);
@@ -122,10 +133,10 @@ class CacheManager {
       default:
         startDate = new Date(now2.getFullYear(), now2.getMonth(), 1);
     }
-    
-    const periodKey = startDate.toISOString().split('T')[0];
+
+    const periodKey = startDate.toISOString().split("T")[0];
     const cacheKey = `budget:${userId}:${resetCycle}:${periodKey}`;
-    
+
     return await this.set(cacheKey, data, ttlSeconds);
   }
 
@@ -136,7 +147,7 @@ class CacheManager {
 
   async getQueueStats() {
     try {
-      const emailQueue = require('./emailQueue');
+      const emailQueue = require("../email/emailQueue");
       const [waiting, active, completed, failed, delayed] = await Promise.all([
         emailQueue.getWaiting(),
         emailQueue.getActive(),
@@ -151,10 +162,15 @@ class CacheManager {
         completed: completed.length,
         failed: failed.length,
         delayed: delayed.length,
-        total: waiting.length + active.length + completed.length + failed.length + delayed.length,
+        total:
+          waiting.length +
+          active.length +
+          completed.length +
+          failed.length +
+          delayed.length,
       };
     } catch (error) {
-      console.error('Error getting queue stats:', error);
+      console.error("Error getting queue stats:", error);
       return null;
     }
   }
@@ -164,19 +180,19 @@ class CacheManager {
       // Test Redis connection
       const pong = await this.redis.ping();
       const queueStats = await this.getQueueStats();
-      
+
       return {
-        redis: pong === 'PONG' ? 'healthy' : 'unhealthy',
-        cache: pong === 'PONG' ? 'operational' : 'error',
-        emailQueue: queueStats ? 'operational' : 'error',
+        redis: pong === "PONG" ? "healthy" : "unhealthy",
+        cache: pong === "PONG" ? "operational" : "error",
+        emailQueue: queueStats ? "operational" : "error",
         queueStats,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
       return {
-        redis: 'error',
-        cache: 'error',
-        emailQueue: 'error',
+        redis: "error",
+        cache: "error",
+        emailQueue: "error",
         error: error.message,
         timestamp: new Date().toISOString(),
       };
@@ -184,4 +200,4 @@ class CacheManager {
   }
 }
 
-export default new CacheManager();
+module.exports = new CacheManager();

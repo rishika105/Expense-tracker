@@ -1,13 +1,13 @@
-import express from "express";
-import { addExpense } from "../controllers/expenseController.js";
-import { auth } from "../middlewares/auth.js";
+const express = require("express");
+const { addExpense } = require("../controllers/expenseController");
+const { auth } = require("../middlewares/auth");
 
 const router = express.Router();
 
 // ============================================
 // routes/admin.js - Optional admin routes for monitoring
-import cacheManager from "../utils/cacheManager.js";
-import { emailQueue } from "../utils/emailQueue.js";
+const cacheManager = require("../utils/cacheManager.js");
+const emailQueue = require("../email/emailQueue.js");
 
 // Middleware to check admin access (implement your own auth logic)
 const requireAdmin = (req, res, next) => {
@@ -121,4 +121,4 @@ router.delete("/queue/clean", requireAdmin, async (req, res) => {
 
 router.post("/add", auth, addExpense);
 
-export default router;
+module.exports = router;

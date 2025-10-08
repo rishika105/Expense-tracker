@@ -1,12 +1,12 @@
-import express from "express";
-import {
+const express = require("express");
+const {
   sendOtp,
   verifyOtp,
   updateProfile,
   getUserDetails,
-  deleteUser
-}  from "../controllers/userController.js";
-import {auth} from "../middlewares/auth.js";
+  deleteUser,
+} = require("../controllers/userController");
+const { auth } = require("../middlewares/auth");
 const router = express.Router();
 
 router.post("/send-otp", sendOtp);
@@ -15,4 +15,4 @@ router.put("/update-profile", auth, updateProfile);
 router.get("/get-user-details", auth, getUserDetails);
 router.delete("/delete-user", auth, deleteUser);
 
-export default router;
+module.exports = router;

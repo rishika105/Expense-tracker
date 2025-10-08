@@ -1,27 +1,28 @@
-import express from "express";
+const dotenv = require("dotenv");
+dotenv.config();
+const express = require("express");
 const app = express();
-import cors from "cors";
-import userRoutes from "./routes/userRoutes.js";
-import preferenceRoutes from "./routes/preferenceRoutes.js";
-import expenseRoutes from "./routes/expenseRoutes.js";
-// import { emailWorker } from "./utils/emailWorker.js"; // This starts the worker
-import "dotenv/config";
-import { dbconnect } from "./config/database.js";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { ExpressAdapter } from "@bull-board/express";
-import {emailQueue} from "./utils/emailQueue.js";
-
+const cors = require("cors");
+const database = require("./config/database");
+const userRoutes = require("./routes/userRoutes");
+const preferenceRoutes = require("./routes/preferenceRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
 const PORT = process.env.PORT || 5000;
+require("./email/emailWorker"); // This starts the worker
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors()); //allow all
 
-dbconnect();
+database.connect();
 
 // Optional: Add queue monitoring endpoint (only for development/admin)
 if (process.env.NODE_ENV !== "production") {
+  const { createBullBoard } = require("@bull-board/api");
+  const { BullMQAdapter } = require("@bull-board/api/bullMQAdapter");
+  const { ExpressAdapter } = require("@bull-board/express");
+  const emailQueue = require("./email/emailQueue");
+
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath("/admin/queues");
 
@@ -41,5 +42,5 @@ app.use("/api/v1/preference", preferenceRoutes);
 app.use("/api/v1/expense", expenseRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server started on PORT ${PORT}`);
+  console.log(`🚀 Server started on PORT ${PORT}`);
 });

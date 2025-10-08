@@ -1,11 +1,12 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-export const dbconnect = () => {
+exports.connect = () => {
   mongoose
     .connect(process.env.MONGODB_URL)
-    .then(() => console.log("DB connected successfully"))
+    .then(() => console.log("📦 MongoDB connected successfully"))
     .catch((error) => {
-      console.log("DB connection failed");
+      console.log("MongoDB connection failed");
       console.error(error);
       process.exit(1);
     });
