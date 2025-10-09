@@ -3,175 +3,24 @@ const Preference = require("../models/Preference");
 const emailQueue = require("../email/emailQueue");
 const Redis = require("ioredis");
 const { fetchExchangeRates } = require("../utils/fetchExchangeRate");
+const { budgetAlertTemplate } = require("../utils/budgetAlertTemplate");
+const {
+  getCurrentPeriodDateRange,
+  getDisplayPeriodDateRange,
+} = require("../utils/findDateRange");
+const cacheManager = require("../utils/cacheManager");
 
 // Redis connection for caching
 const redis = new Redis(process.env.VALKEY_URL || "redis://localhost:6379");
-
-// Helper function to get date range for current period based on reset cycle
-const getCurrentPeriodDateRange = (resetCycle) => {
-  const now = new Date();
-  let startDate;
-
-  switch (resetCycle) {
-    case "weekly":
-      const dayOfWeek = now.getDay();
-      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + daysToMonday
-      );
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case "monthly":
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case "yearly":
-      startDate = new Date(now.getFullYear(), 0, 1);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    default:
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      startDate.setHours(0, 0, 0, 0);
-  }
-
-  const endDate = new Date();
-  endDate.setHours(23, 59, 59, 999);
-
-  return { startDate, endDate };
-};
-
-// Helper function to get date ranges for display periods
-const getDisplayPeriodDateRange = (period) => {
-  const now = new Date();
-  let startDate;
-
-  switch (period) {
-    case "week":
-      const dayOfWeek = now.getDay();
-      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + daysToMonday
-      );
-      break;
-    case "month":
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      break;
-    case "year":
-      startDate = new Date(now.getFullYear(), 0, 1);
-      break;
-    default:
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  }
-
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = new Date();
-  endDate.setHours(23, 59, 59, 999);
-
-  return { startDate, endDate };
-};
-
-// **CACHE MANAGEMENT FUNCTIONS**
-
-// Generate cache key for budget totals
-const getBudgetCacheKey = (userId, resetCycle) => {
-  const { startDate } = getCurrentPeriodDateRange(resetCycle);
-  const periodKey = startDate.toISOString().split("T")[0]; // YYYY-MM-DD
-  return `budget:${userId}:${resetCycle}:${periodKey}`;
-};
-
-// Get cached budget total
-const getCachedBudgetTotal = async (userId, resetCycle) => {
-  try {
-    const cacheKey = getBudgetCacheKey(userId, resetCycle);
-    const cachedData = await redis.get(cacheKey);
-
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
-    return null;
-  } catch (error) {
-    console.error("Error getting cached budget total:", error);
-    return null;
-  }
-};
-
-// Set cached budget total
-const setCachedBudgetTotal = async (userId, resetCycle, data) => {
-  try {
-    const cacheKey = getBudgetCacheKey(userId, resetCycle);
-    const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
-
-    // Calculate TTL - cache until end of current period + 1 day
-    const ttlMs = endDate.getTime() - Date.now() + 24 * 60 * 60 * 1000;
-    const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000)); // Minimum 1 minute
-
-    await redis.setex(cacheKey, ttlSeconds, JSON.stringify(data));
-  } catch (error) {
-    console.error("Error setting cached budget total:", error);
-  }
-};
-
-// Update cached budget total incrementally
-const updateCachedBudgetTotal = async (
-  userId,
-  resetCycle,
-  newExpenseAmount
-) => {
-  try {
-    const cachedData = await getCachedBudgetTotal(userId, resetCycle);
-
-    if (cachedData) {
-      // Validate cached data before updating
-      if (
-        typeof cachedData.total !== "number" ||
-        typeof cachedData.count !== "number"
-      ) {
-        console.warn("Invalid cached data detected, invalidating cache");
-        await invalidateBudgetCache(userId, resetCycle);
-        return null;
-      }
-
-      const updatedData = {
-        ...cachedData,
-        total: Number((cachedData.total + Number(newExpenseAmount)).toFixed(2)), //all converted to num
-        count: cachedData.count + 1,
-      };
-
-      console.log("Cache update:", {
-        previous: cachedData.total,
-        added: newExpenseAmount,
-        new: updatedData.total,
-      });
-
-      await setCachedBudgetTotal(userId, resetCycle, updatedData);
-      return updatedData;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error updating cached budget total:", error);
-    return null;
-  }
-};
-
-// Invalidate cache (called when expenses are deleted/modified)
-const invalidateBudgetCache = async (userId, resetCycle) => {
-  try {
-    const cacheKey = getBudgetCacheKey(userId, resetCycle);
-    await redis.del(cacheKey);
-  } catch (error) {
-    console.error("Error invalidating budget cache:", error);
-  }
-};
 
 // Calculate budget period expenses with caching
 const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
   try {
     // Try cache first
-    const cachedData = await getCachedBudgetTotal(userId, resetCycle);
+    const cachedData = await cacheManager.getCachedBudgetTotal(
+      userId,
+      resetCycle
+    );
     if (cachedData) {
       console.log("Using cached budget total");
       return {
@@ -206,7 +55,7 @@ const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
     };
 
     // Cache the result
-    await setCachedBudgetTotal(userId, resetCycle, data);
+    await cacheManager.setCachedBudgetTotal(userId, resetCycle, data);
 
     return data;
   } catch (error) {
@@ -309,124 +158,23 @@ const checkAndSendThresholdAlerts = async (
 
   // Send alerts for each crossed threshold
   for (const threshold of crossedThresholds) {
-    const isOverBudget = threshold >= 1.0;
-    const percentageText = (threshold * 100).toFixed(0);
 
+    const isOverBudget = threshold >= 1.0;
     const subject = isOverBudget
       ? `🚨 Budget Exceeded - ${percentageText}% of your ${resetCycle} limit surpassed`
       : `⚠️ Budget Alert - ${percentageText}% of your ${resetCycle} budget reached`;
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const emailBody = budgetAlertTemplate({
+      threshold,
+      resetCycle,
+      baseCurrency,
+      budget,
+      currentTotal,
+      latestExpense,
+      budgetPeriodData,
+    });
 
-    const emailBody = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-      <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: ${
-            isOverBudget ? "#dc3545" : "#fd7e14"
-          }; margin: 0; font-size: 28px;">
-            ${isOverBudget ? "🚨" : "⚠️"} Budget ${
-      isOverBudget ? "Exceeded" : "Alert"
-    }!
-          </h1>
-        </div>
-        
-        <div style="background: ${
-          isOverBudget ? "#f8d7da" : "#fff3cd"
-        }; border: 1px solid ${
-      isOverBudget ? "#f5c2c7" : "#ffeaa7"
-    }; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
-          <h3 style="margin: 0 0 15px 0; color: ${
-            isOverBudget ? "#721c24" : "#664d03"
-          };">
-            ${
-              isOverBudget
-                ? "You have exceeded your budget!"
-                : `You've reached ${percentageText}% of your budget`
-            }
-          </h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
-            <div>
-              <strong>Budget:</strong><br>
-              <span style="font-size: 16px; color: #28a745;">${baseCurrency} ${budget.toFixed(
-      2
-    )}</span>
-            </div>
-            <div>
-              <strong>Current Expenses:</strong><br>
-              <span style="font-size: 16px; color: ${
-                isOverBudget ? "#dc3545" : "#fd7e14"
-              };">${baseCurrency} ${currentTotal.toFixed(2)}</span>
-            </div>
-          </div>
-          ${
-            isOverBudget
-              ? `
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #f5c2c7;">
-              <strong style="color: #721c24;">Over budget by: ${baseCurrency} ${(
-                  currentTotal - budget
-                ).toFixed(2)}</strong>
-            </div>
-          `
-              : `
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ffeaa7;">
-              <strong style="color: #664d03;">Remaining: ${baseCurrency} ${(
-                  budget - currentTotal
-                ).toFixed(2)}</strong>
-            </div>
-          `
-          }
-        </div>
-
-        <div style="background: #e9ecef; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
-          <h4 style="margin: 0 0 15px 0; color: #495057;">Latest Expense</h4>
-          <div style="font-size: 14px; line-height: 1.6;">
-            <strong>${latestExpense.title}</strong><br>
-            <span style="color: #6c757d;">${
-              latestExpense.description || "No description"
-            }</span><br>
-            <span style="font-size: 16px; color: #dc3545; font-weight: bold;">
-              -${baseCurrency} ${latestExpense.baseAmount.toFixed(2)}
-            </span>
-            <span style="color: #6c757d; font-size: 12px; margin-left: 10px;">
-              ${new Date(latestExpense.date).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-
-        <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; margin-bottom: 25px; font-size: 14px;">
-          <strong>Budget Period:</strong> 
-       ${new Date(budgetPeriodData.startDate).toLocaleDateString()}
-${new Date(budgetPeriodData.endDate).toLocaleDateString()}
-          <br>
-          <strong>Reset Cycle:</strong> ${
-            resetCycle.charAt(0).toUpperCase() + resetCycle.slice(1)
-          }
-        </div>
-
-        <div style="text-align: center;">
-          <a href="${frontendUrl}/dashboard/budget" 
-             style="background: linear-gradient(135deg, #007bff, #0056b3); 
-                    color: white; 
-                    padding: 12px 30px; 
-                    text-decoration: none; 
-                    border-radius: 25px; 
-                    display: inline-block; 
-                    font-weight: bold;
-                    box-shadow: 0 3px 10px rgba(0,123,255,0.3);
-                    transition: all 0.3s ease;">
-            📊 View Budget Dashboard
-          </a>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-          <p style="color: #6c757d; font-size: 12px; margin: 0;">
-            This is an automated alert from your Expense Tracker.<br>
-            You can manage your notification preferences in your dashboard settings.
-          </p>
-        </div>
-      </div>
-    </div>`;
+    const percentageText = (threshold * 100).toFixed(0);
 
     // Add email to queue instead of sending immediately
     try {
@@ -561,7 +309,7 @@ exports.addExpense = async (req, res) => {
       user: id,
     });
 
-    let budgetPeriodData = await updateCachedBudgetTotal(
+    let budgetPeriodData = await cacheManager.updateCachedBudgetTotal(
       id,
       resetCycle,
       baseAmount
@@ -583,7 +331,7 @@ exports.addExpense = async (req, res) => {
       };
 
       // Cache it for next time
-      await setCachedBudgetTotal(id, resetCycle, budgetPeriodData);
+      await cacheManager.setCachedBudgetTotal(id, resetCycle, budgetPeriodData);
     }
 
     const currentTotal = budgetPeriodData.total;
@@ -786,5 +534,5 @@ exports.getExpenseTotals = async (req, res) => {
 
 // Utility function to invalidate cache when expenses are modified/deleted
 exports.invalidateUserBudgetCache = async (userId, resetCycle) => {
-  await invalidateBudgetCache(userId, resetCycle);
+  await cacheManager.invalidateBudgetCache(userId, resetCycle);
 };

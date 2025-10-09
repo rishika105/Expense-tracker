@@ -12,7 +12,7 @@ const emailQueue = require("../email/emailQueue.js");
 // Middleware to check admin access (implement your own auth logic)
 const requireAdmin = (req, res, next) => {
   // Replace with your admin authentication logic
-  if (process.env.NODE_ENV !== "production" || req.user?.isAdmin) {
+  if (process.env.NODE_ENV !== "production" || process.env.ADMIN_EMAIL === req.user.email) {
     next();
   } else {
     res.status(403).json({ success: false, message: "Admin access required" });

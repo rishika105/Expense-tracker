@@ -1,148 +1,98 @@
 const Redis = require("ioredis");
+const { getCurrentPeriodDateRange } = require("./findDateRange");
 
 class CacheManager {
   constructor() {
     this.redis = new Redis(process.env.VALKEY_URL || "redis://localhost:6379");
   }
 
-  // Generic cache methods
-  async get(key) {
+  // Generate cache key for budget totals
+  async getBudgetCacheKey(userId, resetCycle) {
+    const { startDate } = getCurrentPeriodDateRange(resetCycle);
+    const periodKey = startDate.toISOString().split("T")[0]; // YYYY-MM-DD
+    return `budget:${userId}:${resetCycle}:${periodKey}`;
+  }
+
+  // Get cached budget total
+  async getCachedBudgetTotal(userId, resetCycle) {
     try {
-      const data = await this.redis.get(key);
-      return data ? JSON.parse(data) : null;
+      const cacheKey = await this.getBudgetCacheKey(userId, resetCycle);
+      const cachedData = await this.redis.get(cacheKey);
+
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+      return null;
     } catch (error) {
-      console.error("Cache get error:", error);
+      console.error("Error getting cached budget total:", error);
       return null;
     }
   }
 
-  async set(key, data, ttlSeconds = 3600) {
+  // Set cached budget total
+  async setCachedBudgetTotal(userId, resetCycle, data) {
     try {
-      await this.redis.setex(key, ttlSeconds, JSON.stringify(data));
-      return true;
+      const cacheKey = await this.getBudgetCacheKey(userId, resetCycle);
+      const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
+
+      // Calculate TTL - cache until end of current period + 1 day
+      const ttlMs = endDate.getTime() - Date.now() + 24 * 60 * 60 * 1000;
+      const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000)); // Minimum 1 minute
+
+      await this.redis.setex(cacheKey, ttlSeconds, JSON.stringify(data));
     } catch (error) {
-      console.error("Cache set error:", error);
-      return false;
+      console.error("Error setting cached budget total:", error);
     }
   }
 
-  async del(key) {
+  // Update cached budget total incrementally
+  async updateCachedBudgetTotal(userId, resetCycle, newExpenseAmount) {
     try {
-      await this.redis.del(key);
-      return true;
-    } catch (error) {
-      console.error("Cache del error:", error);
-      return false;
-    }
-  }
+      const cachedData = await this.getCachedBudgetTotal(userId, resetCycle);
 
-  async invalidatePattern(pattern) {
-    try {
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
+      if (cachedData) {
+        // Validate cached data before updating
+        if (
+          typeof cachedData.total !== "number" ||
+          typeof cachedData.count !== "number"
+        ) {
+          console.warn("Invalid cached data detected, invalidating cache");
+          await this.invalidateBudgetCache(userId, resetCycle);
+          return null;
+        }
+
+        const updatedData = {
+          ...cachedData,
+          total: Number(
+            (cachedData.total + Number(newExpenseAmount)).toFixed(2)
+          ), //all converted to num
+          count: cachedData.count + 1,
+        };
+
+        console.log("Cache update:", {
+          previous: cachedData.total,
+          added: newExpenseAmount,
+          new: updatedData.total,
+        });
+
+        await this.setCachedBudgetTotal(userId, resetCycle, updatedData);
+        return updatedData;
       }
-      return keys.length;
+      return null;
     } catch (error) {
-      console.error("Cache invalidate pattern error:", error);
-      return 0;
+      console.error("Error updating cached budget total:", error);
+      return null;
     }
   }
 
-  // Budget-specific cache methods
-  async getBudgetCache(userId, resetCycle) {
-    const now = new Date();
-    let startDate;
-
-    switch (resetCycle) {
-      case "weekly":
-        const dayOfWeek = now.getDay();
-        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        startDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + daysToMonday
-        );
-        break;
-      case "monthly":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "yearly":
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    const periodKey = startDate.toISOString().split("T")[0];
-    const cacheKey = `budget:${userId}:${resetCycle}:${periodKey}`;
-
-    return await this.get(cacheKey);
-  }
-
-  async setBudgetCache(userId, resetCycle, data) {
-    const now = new Date();
-    let endDate;
-
-    switch (resetCycle) {
-      case "weekly":
-        const dayOfWeek = now.getDay();
-        const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-        endDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + daysToSunday
-        );
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      case "monthly":
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      case "yearly":
-        endDate = new Date(now.getFullYear(), 11, 31);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      default:
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        endDate.setHours(23, 59, 59, 999);
-    }
-
-    const ttlMs = endDate.getTime() - Date.now() + 24 * 60 * 60 * 1000; // Add 1 day buffer
-    const ttlSeconds = Math.max(60, Math.floor(ttlMs / 1000));
-
-    const now2 = new Date();
-    let startDate;
-
-    switch (resetCycle) {
-      case "weekly":
-        const dayOfWeek2 = now2.getDay();
-        const daysToMonday = dayOfWeek2 === 0 ? -6 : 1 - dayOfWeek2;
-        startDate = new Date(
-          now2.getFullYear(),
-          now2.getMonth(),
-          now2.getDate() + daysToMonday
-        );
-        break;
-      case "monthly":
-        startDate = new Date(now2.getFullYear(), now2.getMonth(), 1);
-        break;
-      case "yearly":
-        startDate = new Date(now2.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now2.getFullYear(), now2.getMonth(), 1);
-    }
-
-    const periodKey = startDate.toISOString().split("T")[0];
-    const cacheKey = `budget:${userId}:${resetCycle}:${periodKey}`;
-
-    return await this.set(cacheKey, data, ttlSeconds);
-  }
-
+  // Invalidate cache (called when expenses are deleted/modified)
   async invalidateBudgetCache(userId, resetCycle) {
-    const pattern = `budget:${userId}:${resetCycle}:*`;
-    return await this.invalidatePattern(pattern);
+    try {
+      const cacheKey = await this.getBudgetCacheKey(userId, resetCycle);
+      await this.redis.del(cacheKey);
+    } catch (error) {
+      console.error("Error invalidating budget cache:", error);
+    }
   }
 
   async getQueueStats() {
