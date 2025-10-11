@@ -10,9 +10,6 @@ const {
 } = require("../utils/findDateRange");
 const cacheManager = require("../utils/cacheManager");
 
-// Redis connection for caching
-const redis = new Redis(process.env.VALKEY_URL || "redis://localhost:6379");
-
 // Calculate budget period expenses with caching
 const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
   try {
@@ -158,7 +155,7 @@ const checkAndSendThresholdAlerts = async (
 
   // Send alerts for each crossed threshold
   for (const threshold of crossedThresholds) {
-
+    const percentageText = (threshold * 100).toFixed(0);
     const isOverBudget = threshold >= 1.0;
     const subject = isOverBudget
       ? `🚨 Budget Exceeded - ${percentageText}% of your ${resetCycle} limit surpassed`
@@ -173,8 +170,6 @@ const checkAndSendThresholdAlerts = async (
       latestExpense,
       budgetPeriodData,
     });
-
-    const percentageText = (threshold * 100).toFixed(0);
 
     // Add email to queue instead of sending immediately
     try {
@@ -250,6 +245,29 @@ exports.addExpense = async (req, res) => {
       });
     }
 
+    // Validate expense date - prevent future dates and extreme past dates
+    const expenseDate = new Date(date);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+
+    // Prevent future dates
+    if (expenseDate > today) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add expenses for future dates",
+      });
+    }
+
+    // Prevent extremely old dates (more than 10 years ago)
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+    if (expenseDate < tenYearsAgo) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add expenses older than 10 years",
+      });
+    }
+
     // Get user's preferences
     const preference = await Preference.findOne({ user: id }).select(
       "baseCurrency resetCycle budget notifications alertThresholds lastAlertThreshold"
@@ -309,32 +327,67 @@ exports.addExpense = async (req, res) => {
       user: id,
     });
 
-    let budgetPeriodData = await cacheManager.updateCachedBudgetTotal(
-      id,
-      resetCycle,
-      baseAmount
-    );
+    // Check if expense falls within CURRENT budget period
+    const { startDate: currentPeriodStart, endDate: currentPeriodEnd } =
+      getCurrentPeriodDateRange(resetCycle);
 
-    // If no cache exists, initialize it with THIS expense
-    //first expense of the cycle**********************************
-    if (!budgetPeriodData) {
-      console.log("No cache - initializing with current expense");
+    const isInCurrentPeriod =
+      expenseDate >= currentPeriodStart && expenseDate <= currentPeriodEnd;
 
-      const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
+    console.log("Expense date check:", {
+      expenseDate: expenseDate.toISOString().split("T")[0],
+      currentPeriodStart: currentPeriodStart.toISOString().split("T")[0],
+      currentPeriodEnd: currentPeriodEnd.toISOString().split("T")[0],
+      isInCurrentPeriod,
+    });
 
-      budgetPeriodData = {
-        total: baseAmount, // Just use the current expense amount
-        count: 1,
-        startDate,
-        endDate,
+    let budgetPeriodData;
+    if (isInCurrentPeriod) {
+      budgetPeriodData = await cacheManager.updateCachedBudgetTotal(
+        id,
         resetCycle,
-      };
+        Number(baseAmount)
+      );
 
-      // Cache it for next time
-      await cacheManager.setCachedBudgetTotal(id, resetCycle, budgetPeriodData);
+      // If no cache exists, initialize it with THIS expense
+      //first expense of the cycle**********************************
+      if (!budgetPeriodData) {
+        console.log("No cache - initializing with current expense");
+
+        const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
+
+        budgetPeriodData = {
+          total: Number(baseAmount), // Ensure it's a number // Just use the current expense amount
+          count: 1,
+          startDate,
+          endDate,
+          resetCycle,
+        };
+
+        // Cache it for next time
+        await cacheManager.setCachedBudgetTotal(
+          id,
+          resetCycle,
+          budgetPeriodData
+        );
+
+        // CRITICAL: Reset alert threshold for the new budget period
+        if (preference && preference.lastAlertThreshold > 0) {
+          console.log(
+            `Resetting lastAlertThreshold from ${preference.lastAlertThreshold} to 0 (new period)`
+          );
+          preference.lastAlertThreshold = 0;
+          await preference.save();
+        }
+      }
+    } else {
+      // Don't update cache - just get current period total without this expense
+      console.log(
+        "Expense is outside current budget period - not updating cache"
+      );
     }
 
-    const currentTotal = budgetPeriodData.total;
+    const currentTotal = budgetPeriodData ? budgetPeriodData.total : 0;
 
     console.log("Budget status:", {
       currentTotal,
@@ -345,21 +398,23 @@ exports.addExpense = async (req, res) => {
     });
 
     // **IMPROVED THRESHOLD ALERT SYSTEM**
-    try {
-      await checkAndSendThresholdAlerts(
-        id,
-        email,
-        currentTotal,
-        budget,
-        resetCycle,
-        baseCurrency,
-        expense,
-        budgetPeriodData,
-        preference
-      );
-    } catch (alertError) {
-      // Don't fail expense creation if alerts fail
-      console.error("Error sending threshold alerts:", alertError);
+    if (isInCurrentPeriod) {
+      try {
+        await checkAndSendThresholdAlerts(
+          id,
+          email,
+          currentTotal,
+          budget,
+          resetCycle,
+          baseCurrency,
+          expense,
+          budgetPeriodData,
+          preference
+        );
+      } catch (alertError) {
+        // Don't fail expense creation if alerts fail
+        console.error("Error sending threshold alerts:", alertError);
+      }
     }
 
     return res.status(200).json({
@@ -372,8 +427,8 @@ exports.addExpense = async (req, res) => {
         budgetExceeded: budget > 0 && currentTotal > budget,
         remaining: budget > 0 ? Math.max(0, budget - currentTotal) : null,
         resetCycle,
-        periodStart: budgetPeriodData.startDate,
-        periodEnd: budgetPeriodData.endDate,
+        periodStart: budgetPeriodData?.startDate || null,
+        periodEnd: budgetPeriodData?.endDate || null,
       },
     });
   } catch (error) {
