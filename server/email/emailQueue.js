@@ -16,7 +16,7 @@ const emailQueue = new Queue("email-queue", {
 
 // Add queue event listeners for monitoring
 emailQueue.on("completed", (job) => {
-  console.log(`Email job ${job.id} completed successfully`);
+  // console.log(`Email job ${job.id} completed successfully`);
 });
 
 emailQueue.on("failed", (job, err) => {

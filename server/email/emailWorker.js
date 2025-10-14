@@ -8,7 +8,7 @@ const emailWorker = new Worker(
   async (job) => {
     const { email, subject, body, userId, threshold } = job.data;
 
-    console.log(`Processing email job ${job.id} for user ${userId}`);
+    // console.log(`Processing email job ${job.id} for user ${userId}`);
 
     try {
       // Add rate limiting logic if needed
@@ -50,7 +50,7 @@ const emailWorker = new Worker(
 
 // Worker event listeners
 emailWorker.on("completed", (job) => {
-  console.log(`Email worker completed job ${job.id}`);
+  // console.log(`Email worker completed job ${job.id}`);
 });
 
 emailWorker.on("failed", (job, err) => {

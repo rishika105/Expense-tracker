@@ -19,7 +19,7 @@ const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
       resetCycle
     );
     if (cachedData) {
-      console.log("Using cached budget total");
+      // console.log("Using cached budget total");
       return {
         ...cachedData,
         startDate: new Date(cachedData.startDate),
@@ -27,7 +27,7 @@ const calculateCurrentBudgetPeriodExpenses = async (userId, resetCycle) => {
       };
     }
 
-    console.log("Cache miss - calculating from database");
+    // console.log("Cache miss - calculating from database");
     const { startDate, endDate } = getCurrentPeriodDateRange(resetCycle);
 
     const expenses = await Expense.find({
@@ -134,13 +134,13 @@ const checkAndSendThresholdAlerts = async (
 
   const lastAlertThreshold = preference.lastAlertThreshold || 0;
 
-  console.log("Budget alert check:", {
-    progress: (progress * 100).toFixed(1) + "%",
-    thresholds,
-    lastAlertThreshold,
-    currentTotal,
-    budget,
-  });
+  // console.log("Budget alert check:", {
+  //   progress: (progress * 100).toFixed(1) + "%",
+  //   thresholds,
+  //   lastAlertThreshold,
+  //   currentTotal,
+  //   budget,
+  // });
 
   // Find all thresholds that have been crossed but not yet alerted
   const crossedThresholds = thresholds
@@ -195,7 +195,7 @@ const checkAndSendThresholdAlerts = async (
         }
       );
 
-      console.log(`Queued budget alert email for ${percentageText}% threshold`);
+      // console.log(`Queued budget alert email for ${percentageText}% threshold`);
     } catch (emailError) {
       console.error(
         `Failed to queue budget alert email for ${percentageText}% threshold:`,
@@ -291,9 +291,9 @@ exports.addExpense = async (req, res) => {
       const conversionRate = rates[baseCurrency.toLowerCase()];
       baseAmount = amount * conversionRate;
 
-      console.log(
-        `Currency conversion: ${amount} ${currency} -> ${baseAmount} ${baseCurrency} (rate: ${conversionRate})`
-      );
+      // console.log(
+      //   `Currency conversion: ${amount} ${currency} -> ${baseAmount} ${baseCurrency} (rate: ${conversionRate})`
+      // );
     }
 
     // Validate baseAmount to prevent absurd values
@@ -334,12 +334,12 @@ exports.addExpense = async (req, res) => {
     const isInCurrentPeriod =
       expenseDate >= currentPeriodStart && expenseDate <= currentPeriodEnd;
 
-    console.log("Expense date check:", {
-      expenseDate: expenseDate.toISOString().split("T")[0],
-      currentPeriodStart: currentPeriodStart.toISOString().split("T")[0],
-      currentPeriodEnd: currentPeriodEnd.toISOString().split("T")[0],
-      isInCurrentPeriod,
-    });
+    // console.log("Expense date check:", {
+    //   expenseDate: expenseDate.toISOString().split("T")[0],
+    //   currentPeriodStart: currentPeriodStart.toISOString().split("T")[0],
+    //   currentPeriodEnd: currentPeriodEnd.toISOString().split("T")[0],
+    //   isInCurrentPeriod,
+    // });
 
     let budgetPeriodData;
     if (isInCurrentPeriod) {

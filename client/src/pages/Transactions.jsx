@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react"
 import { getExpenses } from "../services/expenseService"
+import { useSelector } from "react-redux"
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+    const { token } = useSelector((state) => state.auth);
+
   const [filters, setFilters] = useState({
     category: "",
     startDate: "",
@@ -50,7 +53,7 @@ const Transactions = () => {
       queryParams.limit = filters.limit
 
       // Call the API with filters
-      const response = await getExpenses(queryParams)
+      const response = await getExpenses(queryParams, token)
 
       // Backend returns: { success, message, expenses, pagination }
       if (response.success) {

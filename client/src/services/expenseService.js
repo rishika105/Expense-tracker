@@ -35,9 +35,8 @@ export function addExpense(data, token) {
 }
 
 // expenseService.js
-export async function getExpenses(filters = {}) {
+export async function getExpenses(filters = {}, token) {
   try {
-    const token = localStorage.getItem('token'); // or from wherever you store it
     const queryParams = new URLSearchParams(filters).toString();
     
     const response = await apiConnector(
@@ -60,3 +59,29 @@ export async function getExpenses(filters = {}) {
     throw error; // Re-throw so component can catch it
   }
 }
+
+
+// expenseService.js
+export async function getExpenseTotals(token) {
+  try {    
+    const response = await apiConnector(
+      "GET",
+      `${BASE_URL}/expense/totals`,
+      null,
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message);
+    }
+    
+    return response.data; // ✅ Returns the data!
+    
+  } catch (error) {
+    console.error("ERROR FETCHING TOTALS", error);
+    throw error; // Re-throw so component can catch it
+  }
+}
+
