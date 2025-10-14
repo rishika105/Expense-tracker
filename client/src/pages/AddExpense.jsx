@@ -1,13 +1,10 @@
-"use client";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { addExpense } from "../services/expenseService";
 import { fetchCurrencies } from "../services/currencyApi";
 
 const AddExpense = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
   const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,9 +39,13 @@ const AddExpense = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const expenseData = {
+      ...formData,
+      amount: parseFloat(parseFloat(formData.amount).toFixed(2)), // keeps 2 decimal precision
+    };
 
-    console.log("Expense data:", formData);
-    await dispatch(addExpense(formData, token));
+    console.log("Expense data:", expenseData);
+    await dispatch(addExpense(expenseData, token));
     setFormData({
       title: "",
       description: "",
@@ -134,13 +135,19 @@ const AddExpense = () => {
                 Amount *
               </label>
               <input
-                type="number"
+                type="text"
                 name="amount"
                 value={formData.amount}
-                onChange={handleChange}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow only digits + one decimal point + up to 2 decimals
+                  //automatic rounding of 10 to 9.99 browser does when i write 10
+                  if (/^\d*\.?\d{0,2}$/.test(value)) {
+                    setFormData((prev) => ({ ...prev, amount: value }));
+                  }
+                }}
                 placeholder="0.00"
-                step="0.01"
-                min="0"
+                inputMode="decimal"
                 required
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-700"
               />
@@ -164,6 +171,11 @@ const AddExpense = () => {
               </select>
             </div>
           </div>
+          <p className="text-sm text-slate-500 mt-2 w-full">
+            Note: The amount will automatically be saved in your base currency
+            for analytics. Although both amounts are visible in transactions
+            page.
+          </p>
 
           {/* Category */}
           <div>

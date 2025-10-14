@@ -1,5 +1,5 @@
 const express = require("express");
-const { addExpense } = require("../controllers/expenseController");
+const { addExpense, getAllExpenses, getExpenseTotals } = require("../controllers/expenseController");
 const { auth } = require("../middlewares/auth");
 
 const router = express.Router();
@@ -120,5 +120,7 @@ router.delete("/queue/clean", requireAdmin, async (req, res) => {
 });
 
 router.post("/add", auth, addExpense);
+router.get("", auth, getAllExpenses);
+router.get("/totals", auth, getExpenseTotals);
 
 module.exports = router;

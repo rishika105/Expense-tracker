@@ -5,7 +5,8 @@ import profileReducer from "../slices/profileSlice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  profile: profileReducer
+  profile: profileReducer,
+
 });
 
 export default rootReducer;

@@ -33,3 +33,30 @@ export function addExpense(data, token) {
     }
   };
 }
+
+// expenseService.js
+export async function getExpenses(filters = {}) {
+  try {
+    const token = localStorage.getItem('token'); // or from wherever you store it
+    const queryParams = new URLSearchParams(filters).toString();
+    
+    const response = await apiConnector(
+      "GET",
+      `${BASE_URL}/expense?${queryParams}`,
+      null,
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message);
+    }
+    
+    return response.data; // ✅ Returns the data!
+    
+  } catch (error) {
+    console.error("ERROR FETCHING EXPENSES", error);
+    throw error; // Re-throw so component can catch it
+  }
+}

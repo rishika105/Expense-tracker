@@ -1,6 +1,5 @@
-"use client"
-
 import { useState, useEffect } from "react"
+import { getExpenses } from "../services/expenseService"
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([])
@@ -13,6 +12,7 @@ const Transactions = () => {
     page: 1,
     limit: 10,
   })
+
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -22,18 +22,17 @@ const Transactions = () => {
   })
 
   const categories = [
-    "Food",
-    "Transport", 
-    "Housing",
-    "Entertainment",
+    "Housing(Rent, maintainence, Utilities, etc.)",
+    "Food(Groceries, Dining, etc.)",
+    "Transportation",
     "Shopping",
+    "Entertainment",
+    "Bills(Water, Electricity, etc.)",
     "Healthcare",
+    "Travel",
     "Education",
-    "Utilities",
     "Other",
   ]
-
-  const paymentMethods = ["Credit Card", "Debit Card", "Cash", "Bank Transfer", "Digital Wallet"]
 
   // API call to fetch transactions
   const fetchTransactions = async () => {
@@ -41,62 +40,30 @@ const Transactions = () => {
     setError(null)
     
     try {
-      // Build query parameters
-      const queryParams = new URLSearchParams()
+      // Build query parameters - only include non-empty values
+      const queryParams = {}
       
-      if (filters.category) queryParams.append('category', filters.category)
-      if (filters.startDate) queryParams.append('startDate', filters.startDate)
-      if (filters.endDate) queryParams.append('endDate', filters.endDate)
-      queryParams.append('page', filters.page.toString())
-      queryParams.append('limit', filters.limit.toString())
+      if (filters.category) queryParams.category = filters.category
+      if (filters.startDate) queryParams.startDate = filters.startDate
+      if (filters.endDate) queryParams.endDate = filters.endDate
+      queryParams.page = filters.page
+      queryParams.limit = filters.limit
 
-      // Replace with your actual API endpoint
-      const response = await fetch(`/api/expenses?${queryParams.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth
-        }
-      })
+      // Call the API with filters
+      const response = await getExpenses(queryParams)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      
-      if (data.success) {
-        // Map backend expense structure to frontend transaction structure
-        const mappedTransactions = data.expenses.map(expense => ({
-          _id: expense._id,
-          title: expense.title,
-          description: expense.description || '',
-          amount: expense.amount,
-          currency: expense.currency,
-          baseAmount: expense.baseAmount,
-          baseCurrency: expense.baseCurrency,
-          category: expense.category,
-          paymentMethod: expense.paymentMethod,
-          date: expense.date,
-          createdAt: expense.createdAt
-        }))
-
-        setTransactions(mappedTransactions)
-        setPagination(data.pagination)
+      // Backend returns: { success, message, expenses, pagination }
+      if (response.success) {
+        setTransactions(response.expenses)
+        setPagination(response.pagination)
       } else {
-        throw new Error(data.message || 'Failed to fetch transactions')
+        setError(response.message || "Failed to fetch transactions")
+        setTransactions([])
       }
-    } catch (error) {
-      console.error("Error fetching transactions:", error)
-      setError(error.message)
+    } catch (err) {
+      console.error("Error fetching transactions:", err)
+      setError(err.message || "Failed to fetch transactions")
       setTransactions([])
-      setPagination({
-        currentPage: 1,
-        totalPages: 1,
-        totalCount: 0,
-        hasNext: false,
-        hasPrev: false,
-      })
     } finally {
       setLoading(false)
     }
@@ -104,7 +71,8 @@ const Transactions = () => {
 
   useEffect(() => {
     fetchTransactions()
-  }, [filters])
+  }, [filters])    //with change of filter it is called again with queries
+  
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({
@@ -125,14 +93,15 @@ const Transactions = () => {
 
   const getCategoryIcon = (category) => {
     const iconMap = {
-      Food: "🍽️",
-      Transport: "🚗",
-      Housing: "🏠",
+      "Food(Groceries, Dining, etc.)": "🍽️",
+      Transportation: "🚗",
+      "Housing(Rent, maintainence, Utilities, etc.)": "🏠",
       Entertainment: "🎬",
       Shopping: "🛍️",
       Healthcare: "🏥",
       Education: "📚",
-      Utilities: "⚡",
+      "Bills(Water, Electricity, etc.)": "⚡",
+      Travel: "✈️",
       Other: "📦",
     }
     return iconMap[category] || "📦"
@@ -196,7 +165,7 @@ const Transactions = () => {
     const end = Math.min(totalPages - 1, currentPage + 1)
     
     for (let i = start; i <= end; i++) {
-      if (i !== 1 && i !== totalPages) { // Don't duplicate first/last
+      if (i !== 1 && i !== totalPages) {
         buttons.push(
           <button
             key={i}
@@ -241,12 +210,12 @@ const Transactions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Transactions</h1>
-          <p className="text-slate-600">Track and manage your expenses</p>
+          <h1 className="text-3xl font-bold text-slate-800">Transactions</h1>
+          <p className="text-slate-600 mt-2">Track and manage your expenses</p>
         </div>
 
         {/* Filters */}
@@ -360,10 +329,10 @@ const Transactions = () => {
             <div className="p-8 text-center">
               <div className="text-6xl mb-4">📊</div>
               <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                {error ? "Error loading transactions" : "No transactions found"}
+                No transactions found
               </h3>
               <p className="text-slate-600">
-                {error ? "Please try again or check your connection." : "Try adjusting your filters or add some transactions."}
+                Try adjusting your filters or add some transactions.
               </p>
             </div>
           ) : (
