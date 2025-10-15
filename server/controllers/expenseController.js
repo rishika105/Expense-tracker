@@ -389,13 +389,13 @@ exports.addExpense = async (req, res) => {
 
     const currentTotal = budgetPeriodData ? budgetPeriodData.total : 0;
 
-    console.log("Budget status:", {
-      currentTotal,
-      budget,
-      resetCycle,
-      expenseAdded: baseAmount,
-      currency: baseCurrency,
-    });
+    // console.log("Budget status:", {
+    //   currentTotal,
+    //   budget,
+    //   resetCycle,
+    //   expenseAdded: baseAmount,
+    //   currency: baseCurrency,
+    // });
 
     // **IMPROVED THRESHOLD ALERT SYSTEM**
     if (isInCurrentPeriod) {

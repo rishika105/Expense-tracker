@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { addExpense } from "../services/expenseService";
 import { fetchCurrencies } from "../services/currencyApi";
+import { categories } from "../assets/data/categories";
 
 const AddExpense = () => {
   const dispatch = useDispatch();
@@ -57,19 +58,6 @@ const AddExpense = () => {
       paymentMethod: "",
     });
   };
-
-  const categories = [
-    "Housing(Rent, maintainence, Utilities, etc.)",
-    "Food(Groceries, Dining, etc.)",
-    "Transportation",
-    "Shopping",
-    "Entertainment",
-    "Bills(Water, Electricity, etc.)",
-    "Healthcare",
-    "Travel",
-    "Education",
-    "Other",
-  ];
 
   const paymentMethods = [
     "Cash",

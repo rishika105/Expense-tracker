@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { getExpenses } from "../services/expenseService"
 import { useSelector } from "react-redux"
+import { categories } from "../assets/data/categories"
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([])
@@ -24,18 +25,7 @@ const Transactions = () => {
     hasPrev: false,
   })
 
-  const categories = [
-    "Housing(Rent, maintainence, Utilities, etc.)",
-    "Food(Groceries, Dining, etc.)",
-    "Transportation",
-    "Shopping",
-    "Entertainment",
-    "Bills(Water, Electricity, etc.)",
-    "Healthcare",
-    "Travel",
-    "Education",
-    "Other",
-  ]
+
 
   // API call to fetch transactions
   const fetchTransactions = async () => {
@@ -96,14 +86,14 @@ const Transactions = () => {
 
   const getCategoryIcon = (category) => {
     const iconMap = {
-      "Food(Groceries, Dining, etc.)": "🍽️",
+      "Food": "🍽️",
       Transportation: "🚗",
-      "Housing(Rent, maintainence, Utilities, etc.)": "🏠",
+      "Housing": "🏠",
       Entertainment: "🎬",
       Shopping: "🛍️",
       Healthcare: "🏥",
       Education: "📚",
-      "Bills(Water, Electricity, etc.)": "⚡",
+      "Bills": "⚡",
       Travel: "✈️",
       Other: "📦",
     }

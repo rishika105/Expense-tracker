@@ -16,6 +16,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import { categories } from "../assets/data/categories";
 
 const PRIMARY = "#2563eb"; // blue-600
 const ACCENT = "#0ea5e9"; // sky-500
@@ -63,28 +64,53 @@ function monthLabel(ym) {
 
 // Helper for human-readable date range and quick-range utilities
 function formatDateHuman(d) {
-  const date = new Date(d);
-  // Force UTC by using ISO string without timezone
-  const dateOnly = d.split('T')[0]; // "2025-10-14"
-  const [year, month, day] = dateOnly.split('-');
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+  if (!d) return "";
+
+  // Handle both "2025-10-14" and "2025-10-14T00:00:00.000Z" formats
+  const dateStr = d.includes("T") ? d.split("T")[0] : d;
+
+  try {
+    // Use the Date object to handle parsing consistently
+    const date = new Date(dateStr + "T00:00:00"); // Add time to avoid timezone issues
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch (e) {
+    // Fallback to your original logic if Date parsing fails
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `${monthNames[month - 1]} ${day}, ${year}`;
+  }
 }
 
 function formatRangeHuman(s, e) {
   return `${formatDateHuman(s)} to ${formatDateHuman(e)}`;
 }
-
-function getLastWeekRange() {
+// Get current week (Monday to Sunday)
+function getCurrentWeekRange() {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-  // Calculate last Monday
+  // Calculate this Monday
   const start = new Date(now);
-  start.setDate(now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) - 7);
+  start.setDate(now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
 
-  // Calculate last Sunday
+  // Calculate this Sunday
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
 
@@ -94,54 +120,48 @@ function getLastWeekRange() {
   };
 }
 
-function getCurrentWeeklyCycle(budgetInfo) {
-  if (!budgetInfo?.periodStart || !budgetInfo?.periodEnd) {
-    return getLastWeekRange(); // fallback
-  }
-
-  const start = new Date(budgetInfo.periodStart);
-  const end = new Date(budgetInfo.periodEnd);
-
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
-}
-function getThisMonthRange() {
+function getCurrentMonthRange() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatDateForInput(start), // Use local date
+    end: formatDateForInput(end), // Use local date
   };
 }
 
-function getLastMonthRange() {
+function getCurrentYearRange() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1); // 1st of last month
-  const end = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of last month
+  const year = now.getFullYear();
+
+  const start = new Date(year, 0, 1); // Jan 1
+  const end = new Date(year, 11, 31); // Dec 31
+
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatDateForInput(start),
+    end: formatDateForInput(end),
   };
 }
+
+// Helper function to format dates for input[type="date"]
+function formatDateForInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getLastYearRange() {
   const now = new Date();
   const start = new Date(now.getFullYear() - 1, 0, 1); // Jan 1 of last year
   const end = new Date(now.getFullYear() - 1, 11, 31); // Dec 31 of last year
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
-}
-function getThisYearRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1); // Jan 1 of current year
-  const end = new Date(now.getFullYear(), 11, 31); // Dec 31 of current year
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatDateForInput(start),
+    end: formatDateForInput(end),
   };
 }
 
@@ -152,14 +172,14 @@ export default function Analytics() {
   // filters
   const [category, setCategory] = useState("");
   const [startDate, setStartDate] = useState(() => {
-    const r = getThisMonthRange();
+    const r = getCurrentMonthRange(); // Change from week to month
     return r.start;
   });
   const [endDate, setEndDate] = useState(() => {
-    const r = getThisMonthRange();
+    const r = getCurrentMonthRange(); // Change from week to month
     return r.end;
   });
-  const [rangeKey, setRangeKey] = useState("this-month");
+  const [rangeKey, setRangeKey] = useState("current-month"); // Update default
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [totals, setTotals] = useState(null);
@@ -224,13 +244,11 @@ export default function Analytics() {
       ignore = true;
     };
   }, [token, category, startDate, endDate, page, limit]);
+  // This runs whenever startDate, endDate, category, page, or limit change
+  // Fetches new expenses from API with the updated date range
 
   // derive category list from expenses
-  const categories = useMemo(() => {
-    const set = new Set();
-    expenses.forEach((e) => e?.category && set.add(e.category));
-    return Array.from(set).sort();
-  }, [expenses]);
+
 
   // aggregate: monthly trend in base amounts if available otherwise amount
   const monthlyTrend = useMemo(() => {
@@ -429,15 +447,14 @@ export default function Analytics() {
                   onChange={(e) => {
                     const key = e.target.value;
                     const ranges = {
-                      "current-week": () => getCurrentWeeklyCycle(budgetInfo),
-                      "last-month": getLastMonthRange,
-                      "this-month": getThisMonthRange,
-                      "this-year": getThisYearRange,
+                      "current-week": getCurrentWeekRange,
+                      "current-month": getCurrentMonthRange,
+                      "current-year": getCurrentYearRange,
                       "last-year": getLastYearRange,
                     };
                     if (ranges[key]) {
                       const r = ranges[key]();
-                      setStartDate(r.start);
+                      setStartDate(r.start); //here it triggers the filter to enter query for api
                       setEndDate(r.end);
                       setRangeKey(key);
                     }
@@ -445,8 +462,8 @@ export default function Analytics() {
                   className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="current-week">Current Week</option>
-                  <option value="last-month">Last Month</option>
-                  <option value="this-month">This Month</option>
+                  <option value="current-month">This Month</option>
+                  <option value="current-year">This Year</option>
                   <option value="last-year">Last Year</option>
                 </select>
               </div>
