@@ -55,6 +55,10 @@ React (Vite) • Tailwind CSS • Recharts • Redux
 * Health check endpoints
 * Cache statistics and retry management
 
+## Demo Video
+
+https://github.com/user-attachments/assets/56fa073a-c6e9-43f5-b677-90232f19936b
+
 
 ## ⚙️ Setup & Installation
 
